@@ -57,28 +57,31 @@ export default function TeamManager({
       return;
     }
 
-    const functionsUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/invite-user`;
     try {
-      const resp = await fetch(functionsUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        },
-        body: JSON.stringify({ email: email.trim(), role }),
-      });
+      const { data: result, error: fnError } = await supabase.functions.invoke(
+        'invite-user',
+        {
+          body: { email: email.trim(), role },
+        }
+      );
 
-      const rawText = await resp.text();
-      let result: { error?: string; success?: boolean } = {};
-      try {
-        result = JSON.parse(rawText);
-      } catch {
-        // pas du JSON — on affichera le texte brut
+      if (fnError) {
+        // Essaye d'extraire le message de l'erreur
+        let msg = fnError.message || 'Erreur lors de l’invitation';
+        // @ts-expect-error - context can carry the raw response body
+        const ctx = fnError.context;
+        if (ctx && typeof ctx.text === 'function') {
+          try {
+            const txt = await ctx.text();
+            if (txt) msg = txt;
+          } catch {}
+        }
+        setError(msg);
+        setSubmitting(false);
+        return;
       }
-
-      if (!resp.ok) {
-        setError(result.error || rawText || `HTTP ${resp.status}`);
+      if (result && typeof result === 'object' && 'error' in result) {
+        setError((result as { error: string }).error);
         setSubmitting(false);
         return;
       }
