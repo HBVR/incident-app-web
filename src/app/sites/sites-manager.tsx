@@ -72,11 +72,11 @@ export default function SitesManager({
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, W, H);
 
-    // Titre "Incident App"
+    // Titre "Notifeo"
     ctx.fillStyle = '#2563eb';
     ctx.font = 'bold 36px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('Incident App', W / 2, 70);
+    ctx.fillText('Notifeo', W / 2, 70);
 
     // Instructions
     ctx.fillStyle = '#374151';

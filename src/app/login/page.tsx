@@ -109,7 +109,7 @@ export default function LoginPage() {
         className="w-full max-w-sm space-y-4 rounded-xl bg-white p-8 shadow-sm border border-gray-200"
       >
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Incident App</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Notifeo</h1>
           <p className="text-sm text-gray-500 mt-1">{title}</p>
         </div>
 

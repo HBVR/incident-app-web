@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Incident App — Dashboard",
-  description: "Dashboard de gestion des incidents",
+  title: "Notifeo — Signalez, notifiez, résolvez",
+  description: "Plateforme de signalement d'incidents terrain. Scannez, signalez, alertez en temps réel.",
 };
 
 export default function RootLayout({
