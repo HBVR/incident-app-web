@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
-type Mode = 'signin' | 'signup';
+type Mode = 'signin' | 'signup' | 'forgot';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,6 +17,12 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function switchMode(next: Mode) {
+    setMode(next);
+    setError(null);
+    setInfo(null);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,7 +39,7 @@ export default function LoginPage() {
       }
       router.push('/');
       router.refresh();
-    } else {
+    } else if (mode === 'signup') {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -49,7 +55,6 @@ export default function LoginPage() {
         setError(error.message);
         return;
       }
-      // Si email confirmation désactivée, on a une session tout de suite
       if (data.session) {
         router.push('/');
         router.refresh();
@@ -58,8 +63,44 @@ export default function LoginPage() {
           'Inscription réussie. Vérifie ta boîte mail pour confirmer ton compte.'
         );
       }
+    } else {
+      // forgot password
+      const redirectTo =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/welcome`
+          : undefined;
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo,
+      });
+      setLoading(false);
+      if (error) {
+        setError(error.message);
+        return;
+      }
+      setInfo(
+        'Si un compte existe avec cet email, un lien de réinitialisation vient d’être envoyé.'
+      );
     }
   }
+
+  const title =
+    mode === 'signin'
+      ? 'Connexion manager'
+      : mode === 'signup'
+      ? 'Créer une organisation'
+      : 'Mot de passe oublié';
+
+  const submitLabel = loading
+    ? mode === 'signin'
+      ? 'Connexion...'
+      : mode === 'signup'
+      ? 'Création...'
+      : 'Envoi...'
+    : mode === 'signin'
+    ? 'Se connecter'
+    : mode === 'signup'
+    ? 'Créer mon compte'
+    : 'Envoyer le lien';
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
@@ -69,9 +110,7 @@ export default function LoginPage() {
       >
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Incident App</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {mode === 'signin' ? 'Connexion manager' : 'Créer une organisation'}
-          </p>
+          <p className="text-sm text-gray-500 mt-1">{title}</p>
         </div>
 
         {mode === 'signup' && (
@@ -114,19 +153,30 @@ export default function LoginPage() {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Mot de passe
-          </label>
-          <input
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-        </div>
+        {mode !== 'forgot' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Mot de passe
+            </label>
+            <input
+              type="password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            {mode === 'signin' && (
+              <button
+                type="button"
+                onClick={() => switchMode('forgot')}
+                className="mt-1 text-xs text-blue-600 hover:text-blue-700"
+              >
+                Mot de passe oublié ?
+              </button>
+            )}
+          </div>
+        )}
 
         {error && (
           <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
@@ -144,46 +194,42 @@ export default function LoginPage() {
           disabled={loading}
           className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
         >
-          {loading
-            ? mode === 'signin'
-              ? 'Connexion...'
-              : 'Création...'
-            : mode === 'signin'
-            ? 'Se connecter'
-            : 'Créer mon compte'}
+          {submitLabel}
         </button>
 
         <div className="text-center text-sm text-gray-600">
-          {mode === 'signin' ? (
+          {mode === 'signin' && (
             <>
               Pas encore de compte ?{' '}
               <button
                 type="button"
-                onClick={() => {
-                  setMode('signup');
-                  setError(null);
-                  setInfo(null);
-                }}
+                onClick={() => switchMode('signup')}
                 className="font-semibold text-blue-600 hover:text-blue-700"
               >
                 Créer une organisation
               </button>
             </>
-          ) : (
+          )}
+          {mode === 'signup' && (
             <>
               Déjà un compte ?{' '}
               <button
                 type="button"
-                onClick={() => {
-                  setMode('signin');
-                  setError(null);
-                  setInfo(null);
-                }}
+                onClick={() => switchMode('signin')}
                 className="font-semibold text-blue-600 hover:text-blue-700"
               >
                 Se connecter
               </button>
             </>
+          )}
+          {mode === 'forgot' && (
+            <button
+              type="button"
+              onClick={() => switchMode('signin')}
+              className="font-semibold text-blue-600 hover:text-blue-700"
+            >
+              Retour à la connexion
+            </button>
           )}
         </div>
       </form>

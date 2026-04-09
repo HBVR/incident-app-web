@@ -14,6 +14,7 @@ export default function WelcomePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
+  const [flowType, setFlowType] = useState<'invite' | 'recovery' | 'signup'>('invite');
 
   useEffect(() => {
     let cancelled = false;
@@ -29,6 +30,10 @@ export default function WelcomePage() {
             const params = new URLSearchParams(hash);
             const accessToken = params.get('access_token');
             const refreshToken = params.get('refresh_token');
+            const type = params.get('type');
+            if (type === 'recovery' || type === 'invite' || type === 'signup') {
+              setFlowType(type);
+            }
             if (accessToken && refreshToken) {
               const { error } = await supabase.auth.setSession({
                 access_token: accessToken,
@@ -145,9 +150,13 @@ export default function WelcomePage() {
         className="w-full max-w-sm space-y-4 rounded-xl bg-white p-8 shadow-sm border border-gray-200"
       >
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Bienvenue 👋</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {flowType === 'recovery' ? 'Nouveau mot de passe 🔑' : 'Bienvenue 👋'}
+          </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Choisissez un mot de passe pour {email}
+            {flowType === 'recovery'
+              ? `Choisissez un nouveau mot de passe pour ${email}`
+              : `Choisissez un mot de passe pour ${email}`}
           </p>
         </div>
 

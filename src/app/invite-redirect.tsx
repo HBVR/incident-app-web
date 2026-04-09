@@ -18,7 +18,11 @@ export default function InviteRedirect() {
     const hash = window.location.hash;
     if (!hash) return;
 
-    if (hash.includes('type=invite') || hash.includes('type=signup')) {
+    if (
+      hash.includes('type=invite') ||
+      hash.includes('type=signup') ||
+      hash.includes('type=recovery')
+    ) {
       // Préserve le hash pour que la page /welcome puisse récupérer la session
       router.replace('/welcome' + hash);
     }
