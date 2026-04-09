@@ -40,10 +40,9 @@ export default async function SitesPage() {
               priority
               className="h-12 w-auto"
             />
-            <div className="hidden sm:block">
-              <p className="text-sm text-gray-500">
-                {orgName} · {user?.email}
-              </p>
+            <div className="hidden sm:flex items-center gap-2 border-l border-gray-200 pl-4">
+              <span className="text-sm font-semibold text-gray-900">{orgName}</span>
+              <span className="text-xs text-gray-400">{user?.email}</span>
             </div>
           </div>
           <div className="flex items-center gap-6">
