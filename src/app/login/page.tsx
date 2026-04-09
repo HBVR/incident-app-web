@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 
 type Mode = 'signin' | 'signup' | 'forgot';
@@ -108,9 +109,16 @@ export default function LoginPage() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm space-y-4 rounded-xl bg-white p-8 shadow-sm border border-gray-200"
       >
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Notifeo</h1>
-          <p className="text-sm text-gray-500 mt-1">{title}</p>
+        <div className="flex flex-col items-center">
+          <Image
+            src="/logo-notifeo.png"
+            alt="Notifeo"
+            width={1000}
+            height={400}
+            priority
+            className="h-16 w-auto mb-2"
+          />
+          <p className="text-sm text-gray-500">{title}</p>
         </div>
 
         {mode === 'signup' && (

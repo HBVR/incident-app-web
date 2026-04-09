@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import SitesManager from './sites-manager';
 import SignOutButton from '../sign-out-button';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,11 +31,20 @@ export default async function SitesPage() {
     <main className="min-h-screen bg-gray-50">
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Notifeo</h1>
-            <p className="text-sm text-gray-500">
-              {orgName} · {user?.email}
-            </p>
+          <div className="flex items-center gap-4">
+            <Image
+              src="/logo-notifeo.png"
+              alt="Notifeo"
+              width={1000}
+              height={400}
+              priority
+              className="h-12 w-auto"
+            />
+            <div className="hidden sm:block">
+              <p className="text-sm text-gray-500">
+                {orgName} · {user?.email}
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-6">
             <nav className="flex gap-4 text-sm font-medium">
