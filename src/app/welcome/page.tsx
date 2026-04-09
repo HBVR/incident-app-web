@@ -21,6 +21,24 @@ export default function WelcomePage() {
 
     (async () => {
       try {
+        // 0. Check for errors in query OR hash (Supabase signals errors that way)
+        if (typeof window !== 'undefined') {
+          const queryParams = new URLSearchParams(window.location.search);
+          const hashParams = new URLSearchParams(
+            window.location.hash.startsWith('#') ? window.location.hash.slice(1) : ''
+          );
+          const errCode = queryParams.get('error_code') ?? hashParams.get('error_code');
+          const errDesc =
+            queryParams.get('error_description') ?? hashParams.get('error_description');
+          if (errCode) {
+            const friendly =
+              errCode === 'otp_expired'
+                ? 'Le lien est expiré ou a déjà été utilisé. Demande-en un nouveau.'
+                : errDesc?.replaceAll('+', ' ') ?? errCode;
+            throw new Error(friendly);
+          }
+        }
+
         // 1. Check the URL hash for tokens (implicit flow from invite/signup)
         if (typeof window !== 'undefined') {
           const hash = window.location.hash.startsWith('#')
@@ -69,13 +87,9 @@ export default function WelcomePage() {
         }
       } catch (e) {
         if (!cancelled) {
-          // Nettoyer le hash pour éviter la boucle de redirection
+          // Nettoyer le hash ET le query pour éviter la boucle de redirection
           if (typeof window !== 'undefined') {
-            window.history.replaceState(
-              null,
-              '',
-              window.location.pathname + window.location.search
-            );
+            window.history.replaceState(null, '', window.location.pathname);
           }
           setInitError(e instanceof Error ? e.message : String(e));
           setChecking(false);
