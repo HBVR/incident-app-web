@@ -71,7 +71,7 @@ export default function Landing() {
           <p className="mx-auto max-w-xl text-center text-gray-600 mb-10">
             2 minutes pour comprendre comment Notifeo simplifie vos signalements terrain.
           </p>
-          <div className="relative w-full overflow-hidden rounded-2xl shadow-2xl" style={{ paddingBottom: '56.25%' }}>
+          <div className="relative w-full overflow-hidden rounded-2xl shadow-2xl mx-auto max-w-7xl" style={{ paddingBottom: '56.25%' }}>
             <iframe
               className="absolute inset-0 h-full w-full"
               src="https://www.youtube.com/embed/D1GDepw5sqM?rel=0"
