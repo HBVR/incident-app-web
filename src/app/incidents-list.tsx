@@ -416,6 +416,20 @@ export default function NotifsList({
           isOwner={openNotif.reporter_id === currentUserId}
           archivedSiteNames={archivedSiteNames}
           currentUserId={currentUserId}
+          onAddPhoto={async (file: File) => {
+            const orgId = (await supabase.from('profiles').select('organization_id').eq('id', currentUserId!).single()).data?.organization_id;
+            if (!orgId) return;
+            const { resizeImage } = await import('@/lib/resize-image');
+            let blob: Blob;
+            try { blob = (await resizeImage(file, 512, 0.7)).blob; } catch { blob = file; }
+            const path = `${orgId}/${openNotif.id}.jpg`;
+            await supabase.storage.from('incident-photos').upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+            await supabase.from('incidents').update({ photo_url: path }).eq('id', openNotif.id);
+            setIncidents((prev) => prev.map((i) => i.id === openNotif.id ? { ...i, photo_url: path } : i));
+            const { data: signed } = await supabase.storage.from('incident-photos').createSignedUrl(path, 3600);
+            if (signed?.signedUrl) setPhotoUrls((prev) => ({ ...prev, [openNotif.id]: signed.signedUrl }));
+            setOpenNotif({ ...openNotif, photo_url: path });
+          }}
         />
       )}
 
@@ -495,6 +509,7 @@ function ModalDetail({
   isOwner = false,
   archivedSiteNames = [],
   currentUserId,
+  onAddPhoto,
 }: {
   notif: Incident;
   photoUrl?: string;
@@ -512,6 +527,7 @@ function ModalDetail({
   isOwner?: boolean;
   archivedSiteNames?: string[];
   currentUserId?: string;
+  onAddPhoto?: (file: File) => Promise<void>;
 }) {
   const canDelete = canManage || isOwner;
   // Build carousel images
@@ -575,6 +591,29 @@ function ModalDetail({
                 🗑 Photo
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Ajouter une photo si aucune */}
+        {images.length === 0 && onAddPhoto && (
+          <div className="bg-gray-50 rounded-t-2xl p-6 text-center border-b border-gray-100">
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              id="add-photo-input"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (file) await onAddPhoto(file);
+              }}
+            />
+            <button
+              onClick={() => document.getElementById('add-photo-input')?.click()}
+              className="rounded-xl border-2 border-dashed border-gray-300 bg-white px-6 py-4 text-sm font-medium text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
+            >
+              📷 Ajouter une photo
+            </button>
           </div>
         )}
 
