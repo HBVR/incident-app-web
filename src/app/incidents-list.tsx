@@ -355,7 +355,9 @@ export default function NotifsList({
               .from('incident-photos')
               .createSignedUrl(path, 3600);
             if (data?.signedUrl) {
-              setAnnotatedUrls((prev) => ({ ...prev, [notifId]: data.signedUrl }));
+              // Cache-bust pour forcer le navigateur à charger la nouvelle version
+              const bustUrl = data.signedUrl + '&_t=' + Date.now();
+              setAnnotatedUrls((prev) => ({ ...prev, [notifId]: bustUrl }));
             }
 
             setShowAnnotator(false);
