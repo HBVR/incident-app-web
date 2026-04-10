@@ -52,11 +52,13 @@ type SiteOption = { id: string; name: string };
 export default function NotifsList({
   initialNotifs,
   sites = [],
+  archivedSiteNames = [],
   currentUserId,
   currentUserRole,
 }: {
   initialNotifs: Incident[];
   sites?: SiteOption[];
+  archivedSiteNames?: string[];
   currentUserId?: string;
   currentUserRole?: string;
 }) {
@@ -324,7 +326,11 @@ export default function NotifsList({
                       {inc.title}
                     </h3>
                     <p className="mt-1 text-xs text-gray-500">
-                      {inc.sites?.name ?? inc.free_location ?? '📍 Libre'} ·{' '}
+                      {inc.sites?.name ?? inc.free_location ?? '📍 Libre'}
+                      {inc.sites?.name && archivedSiteNames.includes(inc.sites.name) && (
+                        <span className="ml-1 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 py-0.5">archivé</span>
+                      )}
+                      {' · '}
                       {new Date(inc.created_at).toLocaleString('fr-FR')}
                     </p>
                   </div>
@@ -393,6 +399,7 @@ export default function NotifsList({
           onMove={(siteId) => moveNotif(openNotif.id, siteId)}
           canManage={isManager}
           isOwner={openNotif.reporter_id === currentUserId}
+          archivedSiteNames={archivedSiteNames}
         />
       )}
 
@@ -470,6 +477,7 @@ function ModalDetail({
   onMove,
   canManage = false,
   isOwner = false,
+  archivedSiteNames = [],
 }: {
   notif: Incident;
   photoUrl?: string;
@@ -485,6 +493,7 @@ function ModalDetail({
   onMove?: (siteId: string | null) => void;
   canManage?: boolean;
   isOwner?: boolean;
+  archivedSiteNames?: string[];
 }) {
   const canDelete = canManage || isOwner;
   // Build carousel images
@@ -576,6 +585,9 @@ function ModalDetail({
             <p>
               <strong className="text-gray-700">Site :</strong>{' '}
               {notif.sites?.name ?? notif.free_location ?? '📍 Libre'}
+              {notif.sites?.name && archivedSiteNames.includes(notif.sites.name) && (
+                <span className="ml-2 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">archivé</span>
+              )}
             </p>
             {notif.sites?.address && (
               <p>

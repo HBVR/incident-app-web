@@ -27,9 +27,13 @@ export default async function DashboardPage() {
 
   const { data: allSites } = await supabase
     .from('sites')
-    .select('id, name')
-    .is('archived_at', null)
+    .select('id, name, archived_at')
     .order('name');
+
+  const activeSites = (allSites ?? []).filter((s) => !s.archived_at);
+  const archivedSiteNames = (allSites ?? [])
+    .filter((s) => s.archived_at)
+    .map((s) => s.name);
 
   const orgName =
     (profile?.organizations as unknown as { name: string } | null)?.name ??
@@ -83,7 +87,8 @@ export default async function DashboardPage() {
         </div>
         <NotifsList
           initialNotifs={(incidents as unknown as import('./incidents-list').Incident[]) ?? []}
-          sites={(allSites as { id: string; name: string }[]) ?? []}
+          sites={activeSites as { id: string; name: string }[]}
+          archivedSiteNames={archivedSiteNames}
           currentUserId={user!.id}
           currentUserRole={profile?.role as string ?? 'employee'}
         />
