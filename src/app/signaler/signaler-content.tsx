@@ -151,13 +151,23 @@ export default function SignalerContent() {
 
   // Upload photo to Supabase Storage (resized to max 1024px)
   async function uploadPhoto(notifId: string): Promise<string | null> {
-    if (!photoFile || !orgId) return null;
-    const { blob } = await resizeImage(photoFile, 1024, 0.8);
+    if (!photoFile) throw new Error('Aucun fichier photo sélectionné');
+    if (!orgId) throw new Error('Organisation non trouvée — impossible d\'uploader');
+
+    let blob: Blob;
+    try {
+      const result = await resizeImage(photoFile, 1024, 0.8);
+      blob = result.blob;
+    } catch (resizeErr) {
+      // Fallback: upload le fichier original sans resize
+      blob = photoFile;
+    }
+
     const path = `${orgId}/${notifId}.jpg`;
     const { error } = await supabase.storage
       .from('incident-photos')
       .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
-    if (error) throw error;
+    if (error) throw new Error(`Upload échoué : ${error.message}`);
     return path;
   }
 
