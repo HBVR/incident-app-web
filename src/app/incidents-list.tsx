@@ -15,7 +15,7 @@ export type Incident = {
   annotated_photo_url: string | null;
   free_location?: string | null;
   sites: { name: string; address: string | null } | null;
-  reporter: { full_name: string | null } | null;
+  reporter: { full_name: string | null; email: string | null } | null;
 };
 
 const SEVERITY_STYLES: Record<Incident['severity'], string> = {
@@ -115,7 +115,7 @@ export default function NotifsList({
           const { data } = await supabase
             .from('incidents')
             .select(
-              'id, title, description, severity, status, created_at, photo_url, annotated_photo_url, free_location, sites(name, address), reporter:profiles!incidents_reporter_id_fkey(full_name)'
+              'id, title, description, severity, status, created_at, photo_url, annotated_photo_url, free_location, sites(name, address), reporter:profiles!incidents_reporter_id_fkey(full_name,email)'
             )
             .order('created_at', { ascending: false });
           if (data) setIncidents(data as unknown as Incident[]);
@@ -334,11 +334,20 @@ export default function NotifsList({
           onSave={async (blob) => {
             const notifId = openNotif.id;
             const orgId = openNotif.photo_url?.split('/')[0] ?? 'unknown';
-            const path = `${orgId}/${notifId}_annotated.jpg`;
+
+            // Supprimer l'ancienne annotation si elle existe
+            if (openNotif.annotated_photo_url) {
+              await supabase.storage
+                .from('incident-photos')
+                .remove([openNotif.annotated_photo_url]);
+            }
+
+            // Nouveau nom unique (timestamp) pour éviter le cache navigateur
+            const path = `${orgId}/${notifId}_ann_${Date.now()}.jpg`;
 
             await supabase.storage
               .from('incident-photos')
-              .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+              .upload(path, blob, { contentType: 'image/jpeg' });
 
             await supabase
               .from('incidents')
@@ -491,7 +500,7 @@ function ModalDetail({
             )}
             <p>
               <strong className="text-gray-700">Signalé par :</strong>{' '}
-              {notif.reporter?.full_name || 'Anonyme'}
+              {notif.reporter?.full_name || notif.reporter?.email || 'Anonyme'}
             </p>
             <p>
               <strong className="text-gray-700">Date :</strong>{' '}
