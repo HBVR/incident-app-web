@@ -14,7 +14,7 @@ export default async function SitesPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('organization_id, organizations(name)')
+    .select('organization_id, role, organizations(name)')
     .eq('id', user!.id)
     .single();
 
@@ -73,6 +73,8 @@ export default async function SitesPage() {
         <SitesManager
           initialSites={sites ?? []}
           organizationId={profile?.organization_id ?? null}
+          currentUserId={user!.id}
+          currentUserRole={(profile?.role as string) ?? 'employee'}
         />
       </div>
     </main>

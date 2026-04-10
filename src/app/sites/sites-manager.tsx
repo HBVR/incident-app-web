@@ -17,10 +17,15 @@ type Site = {
 export default function SitesManager({
   initialSites,
   organizationId,
+  currentUserId,
+  currentUserRole,
 }: {
   initialSites: Site[];
   organizationId: string | null;
+  currentUserId?: string;
+  currentUserRole?: string;
 }) {
+  const isManager = currentUserRole === 'manager' || currentUserRole === 'admin';
   const supabase = createClient();
   const [sites, setSites] = useState<Site[]>(initialSites);
   const [name, setName] = useState('');
@@ -215,12 +220,14 @@ export default function SitesManager({
                       >
                         Télécharger le QR
                       </button>
-                      <button
-                        onClick={() => archiveSite(site.id)}
-                        className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                      >
-                        Archiver
-                      </button>
+                      {(isManager || site.created_by === currentUserId) && (
+                        <button
+                          onClick={() => archiveSite(site.id)}
+                          className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                          Archiver
+                        </button>
+                      )}
                     </div>
                   </article>
                 ))}
@@ -247,20 +254,22 @@ export default function SitesManager({
                         {site.address && (
                           <p className="text-sm text-gray-400 mt-0.5">{site.address}</p>
                         )}
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          <button
-                            onClick={() => unarchiveSite(site.id)}
-                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white"
-                          >
-                            Restaurer
-                          </button>
-                          <button
-                            onClick={() => deleteSite(site.id)}
-                            className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-500 hover:bg-red-50"
-                          >
-                            Supprimer
-                          </button>
-                        </div>
+                        {(isManager || site.created_by === currentUserId) && (
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <button
+                              onClick={() => unarchiveSite(site.id)}
+                              className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white"
+                            >
+                              Restaurer
+                            </button>
+                            <button
+                              onClick={() => deleteSite(site.id)}
+                              className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-500 hover:bg-red-50"
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        )}
                       </article>
                     ))}
                   </div>
