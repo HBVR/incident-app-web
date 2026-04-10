@@ -45,6 +45,7 @@ export default function SitesManager({
         name: name.trim(),
         address: address.trim() || null,
         organization_id: organizationId,
+        created_by: currentUserId,
       })
       .select('id, name, address, qr_token, created_at, archived_at, created_by')
       .single();
