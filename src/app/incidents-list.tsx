@@ -97,6 +97,12 @@ export default function NotifsList({
     await supabase.from('incidents').update({ status }).eq('id', id);
   }
 
+  async function deleteNotif(id: string) {
+    if (!confirm('Supprimer cette notif ? Cette action est irréversible.')) return;
+    setIncidents((prev) => prev.filter((i) => i.id !== id));
+    await supabase.from('incidents').delete().eq('id', id);
+  }
+
   if (incidents.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center">
@@ -150,16 +156,25 @@ export default function NotifsList({
                     {inc.reporter?.full_name || 'Anonyme'}
                   </p>
                 </div>
-                <select
-                  value={inc.status}
-                  onChange={(e) => changeStatus(inc.id, e.target.value as Incident['status'])}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="open">Ouvert</option>
-                  <option value="in_progress">En cours</option>
-                  <option value="resolved">Résolu</option>
-                  <option value="closed">Fermé</option>
-                </select>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <select
+                    value={inc.status}
+                    onChange={(e) => changeStatus(inc.id, e.target.value as Incident['status'])}
+                    className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="open">Ouvert</option>
+                    <option value="in_progress">En cours</option>
+                    <option value="resolved">Résolu</option>
+                    <option value="closed">Fermé</option>
+                  </select>
+                  <button
+                    onClick={() => deleteNotif(inc.id)}
+                    title="Supprimer"
+                    className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm text-gray-400 hover:text-red-600 hover:border-red-300 transition-colors"
+                  >
+                    🗑
+                  </button>
+                </div>
               </div>
             </div>
           </div>
