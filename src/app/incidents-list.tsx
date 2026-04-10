@@ -306,15 +306,18 @@ export default function NotifsList({
           setCarouselIdx={setCarouselIdx}
           onClose={() => { setOpenNotif(null); setCarouselIdx(0); }}
           onAnnotate={async () => {
-            // Télécharger l'image via Supabase (bypass CORS)
-            if (openNotif.photo_url) {
-              const { data } = await supabase.storage
-                .from('incident-photos')
-                .download(openNotif.photo_url);
-              if (data) {
-                setAnnotatorBlobUrl(URL.createObjectURL(data));
-                setShowAnnotator(true);
-              }
+            if (!openNotif.photo_url) return;
+            try {
+              // Proxy via notre API server-side (pas de CORS)
+              const resp = await fetch(
+                `/api/image-proxy?path=${encodeURIComponent(openNotif.photo_url)}`
+              );
+              if (!resp.ok) throw new Error('Download failed');
+              const blob = await resp.blob();
+              setAnnotatorBlobUrl(URL.createObjectURL(blob));
+              setShowAnnotator(true);
+            } catch (e) {
+              alert('Impossible de charger l\'image : ' + (e instanceof Error ? e.message : e));
             }
           }}
           onChangeStatus={(status) => {
