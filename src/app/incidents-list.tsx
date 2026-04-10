@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import ImageAnnotator from './image-annotator';
 
 export type Incident = {
   id: string;
@@ -11,6 +12,7 @@ export type Incident = {
   status: 'open' | 'in_progress' | 'resolved' | 'closed';
   created_at: string;
   photo_url: string | null;
+  annotated_photo_url: string | null;
   free_location?: string | null;
   sites: { name: string; address: string | null } | null;
   reporter: { full_name: string | null } | null;
@@ -54,6 +56,9 @@ export default function NotifsList({
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [siteFilter, setSiteFilter] = useState<string | null>(null); // null = tous
   const [openNotif, setOpenNotif] = useState<Incident | null>(null); // modal
+  const [annotatedUrls, setAnnotatedUrls] = useState<Record<string, string>>({});
+  const [showAnnotator, setShowAnnotator] = useState(false);
+  const [carouselIdx, setCarouselIdx] = useState(0); // 0 = original, 1 = annoté
 
   // Liste unique des sites pour les pills de filtre
   const siteNames = useMemo(() => {
@@ -74,18 +79,27 @@ export default function NotifsList({
     return incidents.filter((i) => i.sites?.name === siteFilter);
   }, [incidents, siteFilter]);
 
-  // Générer les URL signées pour les photos
+  // Générer les URL signées pour les photos (originales + annotées)
   useEffect(() => {
     (async () => {
       const urls: Record<string, string> = {};
+      const annUrls: Record<string, string> = {};
       for (const inc of incidents) {
-        if (!inc.photo_url) continue;
-        const { data } = await supabase.storage
-          .from('incident-photos')
-          .createSignedUrl(inc.photo_url, 3600);
-        if (data?.signedUrl) urls[inc.id] = data.signedUrl;
+        if (inc.photo_url) {
+          const { data } = await supabase.storage
+            .from('incident-photos')
+            .createSignedUrl(inc.photo_url, 3600);
+          if (data?.signedUrl) urls[inc.id] = data.signedUrl;
+        }
+        if (inc.annotated_photo_url) {
+          const { data } = await supabase.storage
+            .from('incident-photos')
+            .createSignedUrl(inc.annotated_photo_url, 3600);
+          if (data?.signedUrl) annUrls[inc.id] = data.signedUrl;
+        }
       }
       setPhotoUrls(urls);
+      setAnnotatedUrls(annUrls);
     })();
   }, [incidents, supabase]);
 
@@ -100,7 +114,7 @@ export default function NotifsList({
           const { data } = await supabase
             .from('incidents')
             .select(
-              'id, title, description, severity, status, created_at, photo_url, free_location, sites(name, address), reporter:profiles!incidents_reporter_id_fkey(full_name)'
+              'id, title, description, severity, status, created_at, photo_url, annotated_photo_url, free_location, sites(name, address), reporter:profiles!incidents_reporter_id_fkey(full_name)'
             )
             .order('created_at', { ascending: false });
           if (data) setIncidents(data as unknown as Incident[]);
@@ -257,24 +271,65 @@ export default function NotifsList({
       </div>
 
       {/* ====== MODAL DÉTAIL ====== */}
-      {openNotif && (
+      {openNotif && !showAnnotator && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setOpenNotif(null)}
+          onClick={() => { setOpenNotif(null); setCarouselIdx(0); }}
         >
           <div
             className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Image pleine largeur */}
-            {photoUrls[openNotif.id] && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={photoUrls[openNotif.id]}
-                alt=""
-                className="w-full max-h-96 object-contain bg-gray-100 rounded-t-2xl"
-              />
-            )}
+            {/* Carousel images */}
+            {photoUrls[openNotif.id] && (() => {
+              const images: { url: string; label: string }[] = [
+                { url: photoUrls[openNotif.id], label: 'Original' },
+              ];
+              if (annotatedUrls[openNotif.id]) {
+                images.push({ url: annotatedUrls[openNotif.id], label: 'Annoté' });
+              }
+              const idx = Math.min(carouselIdx, images.length - 1);
+              return (
+                <div className="relative bg-gray-100 rounded-t-2xl">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={images[idx].url}
+                    alt={images[idx].label}
+                    className="w-full max-h-96 object-contain cursor-pointer"
+                    onClick={() => window.open(images[idx].url, '_blank')}
+                    title="Cliquer pour ouvrir en plein écran"
+                  />
+                  {/* Carousel controls */}
+                  {images.length > 1 && (
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/60 rounded-full px-3 py-1.5">
+                      {images.map((img, i) => (
+                        <button
+                          key={i}
+                          onClick={(e) => { e.stopPropagation(); setCarouselIdx(i); }}
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full transition-colors ${
+                            idx === i
+                              ? 'bg-white text-gray-900'
+                              : 'text-gray-300 hover:text-white'
+                          }`}
+                        >
+                          {img.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {/* Annotate button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAnnotator(true);
+                    }}
+                    className="absolute top-3 right-3 bg-black/60 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-black/80"
+                  >
+                    ✏️ Annoter
+                  </button>
+                </div>
+              );
+            })()}
 
             <div className="p-6 space-y-4">
               {/* Badges */}
@@ -348,7 +403,7 @@ export default function NotifsList({
                   Supprimer
                 </button>
                 <button
-                  onClick={() => setOpenNotif(null)}
+                  onClick={() => { setOpenNotif(null); setCarouselIdx(0); }}
                   className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
                 >
                   Fermer
@@ -357,6 +412,49 @@ export default function NotifsList({
             </div>
           </div>
         </div>
+      )}
+
+      {/* ====== ANNOTATEUR D'IMAGE ====== */}
+      {showAnnotator && openNotif && photoUrls[openNotif.id] && (
+        <ImageAnnotator
+          imageUrl={photoUrls[openNotif.id]}
+          onCancel={() => setShowAnnotator(false)}
+          onSave={async (blob) => {
+            // Upload l'image annotée
+            const notifId = openNotif.id;
+            // Récupérer l'org_id du path de l'image originale (format: orgId/notifId.jpg)
+            const orgId = openNotif.photo_url?.split('/')[0] ?? 'unknown';
+            const path = `${orgId}/${notifId}_annotated.jpg`;
+
+            await supabase.storage
+              .from('incident-photos')
+              .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+
+            // Mettre à jour la DB
+            await supabase
+              .from('incidents')
+              .update({ annotated_photo_url: path })
+              .eq('id', notifId);
+
+            // Mettre à jour l'état local
+            setIncidents((prev) =>
+              prev.map((i) =>
+                i.id === notifId ? { ...i, annotated_photo_url: path } : i
+              )
+            );
+
+            // Générer l'URL signée pour l'annotée
+            const { data } = await supabase.storage
+              .from('incident-photos')
+              .createSignedUrl(path, 3600);
+            if (data?.signedUrl) {
+              setAnnotatedUrls((prev) => ({ ...prev, [notifId]: data.signedUrl }));
+            }
+
+            setShowAnnotator(false);
+            setCarouselIdx(1); // Afficher l'image annotée
+          }}
+        />
       )}
     </>
   );
