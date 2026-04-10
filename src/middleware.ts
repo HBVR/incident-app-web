@@ -36,7 +36,7 @@ export async function middleware(request: NextRequest) {
     isWelcomePage ||
     isConfirmPage ||
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/api/public');
+    pathname.startsWith('/api/');
 
   // La racine "/" est accessible à tous (landing page si pas connecté, dashboard si connecté)
   const isRoot = pathname === '/';
