@@ -32,46 +32,35 @@ export default function ImageAnnotator({ imageUrl, onSave, onCancel }: Props) {
   // Canvas dimensions
   const [dims, setDims] = useState({ width: 800, height: 600 });
 
-  // Load image onto canvas (download as blob first to avoid CORS issues)
+  // Load image onto canvas (imageUrl is already a local blob URL, no CORS issue)
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        // Download image as blob to bypass CORS
-        const resp = await fetch(imageUrl);
-        const blob = await resp.blob();
-        const blobUrl = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      if (cancelled) return;
+      bgImageRef.current = img;
 
-        const img = new Image();
-        img.onload = () => {
-          if (cancelled) return;
-          bgImageRef.current = img;
+      const maxW = Math.min(900, window.innerWidth - 32);
+      const scale = maxW / img.width;
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      setDims({ width: w, height: h });
 
-          const maxW = Math.min(900, window.innerWidth - 32);
-          const scale = maxW / img.width;
-          const w = Math.round(img.width * scale);
-          const h = Math.round(img.height * scale);
-          setDims({ width: w, height: h });
-
-          setTimeout(() => {
-            const canvas = canvasRef.current;
-            if (!canvas) return;
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d')!;
-            ctx.drawImage(img, 0, 0, w, h);
-            historyRef.current = [ctx.getImageData(0, 0, w, h)];
-            setLoaded(true);
-          }, 50);
-        };
-        img.onerror = () => {
-          if (!cancelled) setLoaded(true); // Show canvas anyway
-        };
-        img.src = blobUrl;
-      } catch {
-        if (!cancelled) setLoaded(true);
-      }
-    })();
+      setTimeout(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, w, h);
+        historyRef.current = [ctx.getImageData(0, 0, w, h)];
+        setLoaded(true);
+      }, 50);
+    };
+    img.onerror = () => {
+      if (!cancelled) setLoaded(true);
+    };
+    img.src = imageUrl;
     return () => { cancelled = true; };
   }, [imageUrl]);
 

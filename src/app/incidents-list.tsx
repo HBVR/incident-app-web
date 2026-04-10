@@ -58,6 +58,7 @@ export default function NotifsList({
   const [openNotif, setOpenNotif] = useState<Incident | null>(null); // modal
   const [annotatedUrls, setAnnotatedUrls] = useState<Record<string, string>>({});
   const [showAnnotator, setShowAnnotator] = useState(false);
+  const [annotatorBlobUrl, setAnnotatorBlobUrl] = useState<string | null>(null);
   const [carouselIdx, setCarouselIdx] = useState(0); // 0 = original, 1 = annoté
 
   // Liste unique des sites pour les pills de filtre
@@ -304,7 +305,18 @@ export default function NotifsList({
           carouselIdx={carouselIdx}
           setCarouselIdx={setCarouselIdx}
           onClose={() => { setOpenNotif(null); setCarouselIdx(0); }}
-          onAnnotate={() => setShowAnnotator(true)}
+          onAnnotate={async () => {
+            // Télécharger l'image via Supabase (bypass CORS)
+            if (openNotif.photo_url) {
+              const { data } = await supabase.storage
+                .from('incident-photos')
+                .download(openNotif.photo_url);
+              if (data) {
+                setAnnotatorBlobUrl(URL.createObjectURL(data));
+                setShowAnnotator(true);
+              }
+            }
+          }}
           onChangeStatus={(status) => {
             changeStatus(openNotif.id, status);
             setOpenNotif({ ...openNotif, status });
@@ -315,10 +327,14 @@ export default function NotifsList({
       )}
 
       {/* ====== ANNOTATEUR D'IMAGE ====== */}
-      {showAnnotator && openNotif && photoUrls[openNotif.id] && (
+      {showAnnotator && openNotif && annotatorBlobUrl && (
         <ImageAnnotator
-          imageUrl={photoUrls[openNotif.id]}
-          onCancel={() => setShowAnnotator(false)}
+          imageUrl={annotatorBlobUrl}
+          onCancel={() => {
+            setShowAnnotator(false);
+            if (annotatorBlobUrl) URL.revokeObjectURL(annotatorBlobUrl);
+            setAnnotatorBlobUrl(null);
+          }}
           onSave={async (blob) => {
             const notifId = openNotif.id;
             const orgId = openNotif.photo_url?.split('/')[0] ?? 'unknown';
@@ -347,6 +363,8 @@ export default function NotifsList({
             }
 
             setShowAnnotator(false);
+            if (annotatorBlobUrl) URL.revokeObjectURL(annotatorBlobUrl);
+            setAnnotatorBlobUrl(null);
             setCarouselIdx(1);
           }}
         />
