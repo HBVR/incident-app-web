@@ -31,10 +31,12 @@ export async function middleware(request: NextRequest) {
   const isAuthPage = pathname === '/login';
   const isWelcomePage = pathname === '/welcome';
   const isConfirmPage = pathname === '/confirm';
+  const isLegalPage = pathname === '/legal' || pathname === '/privacy';
   const isPublic =
     isAuthPage ||
     isWelcomePage ||
     isConfirmPage ||
+    isLegalPage ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/');
 

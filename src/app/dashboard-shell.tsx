@@ -1,7 +1,7 @@
 import Image from 'next/image';
-import SignOutButton from './sign-out-button';
 import UsageBar from './usage-bar';
 import NotifsNavLink from './notifs-nav-link';
+import UserMenu from './user-menu';
 import type { Usage } from '@/lib/plan-limits';
 
 export default function DashboardShell({
@@ -67,7 +67,7 @@ export default function DashboardShell({
                 </a>
               ))}
             </nav>
-            <SignOutButton />
+            <UserMenu />
           </div>
         </div>
       </header>

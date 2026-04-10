@@ -249,9 +249,9 @@ export default function Landing() {
             © {new Date().getFullYear()} Notifeo · HBVR · Tous droits réservés
           </p>
           <div className="flex gap-6 text-sm text-gray-400">
-            <a href="mailto:contact@notifeo.fr" className="hover:text-gray-600">
-              Contact
-            </a>
+            <a href="/legal" className="hover:text-gray-600">Mentions légales</a>
+            <a href="/privacy" className="hover:text-gray-600">Confidentialité</a>
+            <a href="mailto:contact@notifeo.fr" className="hover:text-gray-600">Contact</a>
           </div>
         </div>
       </footer>
