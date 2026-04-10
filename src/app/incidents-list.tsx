@@ -141,6 +141,31 @@ export default function NotifsList({
     await supabase.from('incidents').delete().eq('id', id);
   }
 
+  async function deletePhoto(notif: Incident, type: 'original' | 'annotated') {
+    const field = type === 'original' ? 'photo_url' : 'annotated_photo_url';
+    const path = type === 'original' ? notif.photo_url : notif.annotated_photo_url;
+    if (!path) return;
+    if (!confirm(`Supprimer la photo ${type === 'annotated' ? 'annotée' : 'originale'} ?`)) return;
+
+    // Supprimer du storage
+    await supabase.storage.from('incident-photos').remove([path]);
+    // Mettre à jour la DB
+    await supabase.from('incidents').update({ [field]: null }).eq('id', notif.id);
+    // Mettre à jour l'état local
+    setIncidents((prev) =>
+      prev.map((i) => (i.id === notif.id ? { ...i, [field]: null } : i))
+    );
+    if (type === 'original') {
+      setPhotoUrls((prev) => { const n = { ...prev }; delete n[notif.id]; return n; });
+    } else {
+      setAnnotatedUrls((prev) => { const n = { ...prev }; delete n[notif.id]; return n; });
+    }
+    if (openNotif?.id === notif.id) {
+      setOpenNotif({ ...notif, [field]: null });
+    }
+    setCarouselIdx(0);
+  }
+
   if (incidents.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center">
@@ -272,146 +297,21 @@ export default function NotifsList({
 
       {/* ====== MODAL DÉTAIL ====== */}
       {openNotif && !showAnnotator && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => { setOpenNotif(null); setCarouselIdx(0); }}
-        >
-          <div
-            className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Carousel images */}
-            {photoUrls[openNotif.id] && (() => {
-              const images: { url: string; label: string }[] = [
-                { url: photoUrls[openNotif.id], label: 'Original' },
-              ];
-              if (annotatedUrls[openNotif.id]) {
-                images.push({ url: annotatedUrls[openNotif.id], label: 'Annoté' });
-              }
-              const idx = Math.min(carouselIdx, images.length - 1);
-              return (
-                <div className="relative bg-gray-100 rounded-t-2xl">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={images[idx].url}
-                    alt={images[idx].label}
-                    className="w-full max-h-96 object-contain cursor-pointer"
-                    onClick={() => window.open(images[idx].url, '_blank')}
-                    title="Cliquer pour ouvrir en plein écran"
-                  />
-                  {/* Carousel controls */}
-                  {images.length > 1 && (
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/60 rounded-full px-3 py-1.5">
-                      {images.map((img, i) => (
-                        <button
-                          key={i}
-                          onClick={(e) => { e.stopPropagation(); setCarouselIdx(i); }}
-                          className={`text-xs font-medium px-2 py-0.5 rounded-full transition-colors ${
-                            idx === i
-                              ? 'bg-white text-gray-900'
-                              : 'text-gray-300 hover:text-white'
-                          }`}
-                        >
-                          {img.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {/* Annotate button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowAnnotator(true);
-                    }}
-                    className="absolute top-3 right-3 bg-black/60 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-black/80"
-                  >
-                    ✏️ Annoter
-                  </button>
-                </div>
-              );
-            })()}
-
-            <div className="p-6 space-y-4">
-              {/* Badges */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span
-                  className={`rounded-full border px-3 py-1 text-xs font-semibold ${SEVERITY_STYLES[openNotif.severity]}`}
-                >
-                  {SEVERITY_LABELS[openNotif.severity]}
-                </span>
-                <span
-                  className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLES[openNotif.status]}`}
-                >
-                  {STATUS_LABELS[openNotif.status]}
-                </span>
-              </div>
-
-              {/* Titre */}
-              <h2 className="text-xl font-bold text-gray-900">
-                {openNotif.title}
-              </h2>
-
-              {/* Description */}
-              {openNotif.description && (
-                <p className="text-gray-700 whitespace-pre-wrap">
-                  {openNotif.description}
-                </p>
-              )}
-
-              {/* Metadata */}
-              <div className="border-t border-gray-100 pt-4 space-y-1 text-sm text-gray-500">
-                <p>
-                  <strong className="text-gray-700">Site :</strong>{' '}
-                  {openNotif.sites?.name ?? openNotif.free_location ?? '📍 Libre'}
-                </p>
-                {openNotif.sites?.address && (
-                  <p>
-                    <strong className="text-gray-700">Adresse :</strong>{' '}
-                    {openNotif.sites.address}
-                  </p>
-                )}
-                <p>
-                  <strong className="text-gray-700">Signalé par :</strong>{' '}
-                  {openNotif.reporter?.full_name || 'Anonyme'}
-                </p>
-                <p>
-                  <strong className="text-gray-700">Date :</strong>{' '}
-                  {new Date(openNotif.created_at).toLocaleString('fr-FR')}
-                </p>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 border-t border-gray-100 pt-4">
-                <select
-                  value={openNotif.status}
-                  onChange={(e) => {
-                    const newStatus = e.target.value as Incident['status'];
-                    changeStatus(openNotif.id, newStatus);
-                    setOpenNotif({ ...openNotif, status: newStatus });
-                  }}
-                  className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700"
-                >
-                  <option value="open">Ouvert</option>
-                  <option value="in_progress">En cours</option>
-                  <option value="resolved">Résolu</option>
-                  <option value="closed">Fermé</option>
-                </select>
-                <button
-                  onClick={() => deleteNotif(openNotif.id)}
-                  className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-                >
-                  Supprimer
-                </button>
-                <button
-                  onClick={() => { setOpenNotif(null); setCarouselIdx(0); }}
-                  className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
-                >
-                  Fermer
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ModalDetail
+          notif={openNotif}
+          photoUrl={photoUrls[openNotif.id]}
+          annotatedUrl={annotatedUrls[openNotif.id]}
+          carouselIdx={carouselIdx}
+          setCarouselIdx={setCarouselIdx}
+          onClose={() => { setOpenNotif(null); setCarouselIdx(0); }}
+          onAnnotate={() => setShowAnnotator(true)}
+          onChangeStatus={(status) => {
+            changeStatus(openNotif.id, status);
+            setOpenNotif({ ...openNotif, status });
+          }}
+          onDelete={() => deleteNotif(openNotif.id)}
+          onDeletePhoto={(type) => deletePhoto(openNotif, type)}
+        />
       )}
 
       {/* ====== ANNOTATEUR D'IMAGE ====== */}
@@ -420,9 +320,7 @@ export default function NotifsList({
           imageUrl={photoUrls[openNotif.id]}
           onCancel={() => setShowAnnotator(false)}
           onSave={async (blob) => {
-            // Upload l'image annotée
             const notifId = openNotif.id;
-            // Récupérer l'org_id du path de l'image originale (format: orgId/notifId.jpg)
             const orgId = openNotif.photo_url?.split('/')[0] ?? 'unknown';
             const path = `${orgId}/${notifId}_annotated.jpg`;
 
@@ -430,20 +328,17 @@ export default function NotifsList({
               .from('incident-photos')
               .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
 
-            // Mettre à jour la DB
             await supabase
               .from('incidents')
               .update({ annotated_photo_url: path })
               .eq('id', notifId);
 
-            // Mettre à jour l'état local
             setIncidents((prev) =>
               prev.map((i) =>
                 i.id === notifId ? { ...i, annotated_photo_url: path } : i
               )
             );
 
-            // Générer l'URL signée pour l'annotée
             const { data } = await supabase.storage
               .from('incident-photos')
               .createSignedUrl(path, 3600);
@@ -452,10 +347,170 @@ export default function NotifsList({
             }
 
             setShowAnnotator(false);
-            setCarouselIdx(1); // Afficher l'image annotée
+            setCarouselIdx(1);
           }}
         />
       )}
     </>
+  );
+}
+
+/* ====== MODAL DÉTAIL (composant séparé pour éviter les problèmes de rendu) ====== */
+function ModalDetail({
+  notif,
+  photoUrl,
+  annotatedUrl,
+  carouselIdx,
+  setCarouselIdx,
+  onClose,
+  onAnnotate,
+  onChangeStatus,
+  onDelete,
+  onDeletePhoto,
+}: {
+  notif: Incident;
+  photoUrl?: string;
+  annotatedUrl?: string;
+  carouselIdx: number;
+  setCarouselIdx: (idx: number) => void;
+  onClose: () => void;
+  onAnnotate: () => void;
+  onChangeStatus: (status: Incident['status']) => void;
+  onDelete: () => void;
+  onDeletePhoto: (type: 'original' | 'annotated') => void;
+}) {
+  // Build carousel images
+  const images: { url: string; label: string; type: 'original' | 'annotated' }[] = [];
+  if (photoUrl) images.push({ url: photoUrl, label: 'Original', type: 'original' });
+  if (annotatedUrl) images.push({ url: annotatedUrl, label: 'Annoté', type: 'annotated' });
+  const idx = images.length > 0 ? Math.min(carouselIdx, images.length - 1) : 0;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Image carousel */}
+        {images.length > 0 && (
+          <div className="relative bg-gray-100 rounded-t-2xl">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={images[idx].url}
+              alt={images[idx].label}
+              className="w-full max-h-96 object-contain cursor-pointer"
+              onClick={() => window.open(images[idx].url, '_blank')}
+              title="Cliquer pour ouvrir en plein écran"
+            />
+
+            {/* Carousel tabs */}
+            {images.length > 1 && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/60 rounded-full px-3 py-1.5">
+                {images.map((img, i) => (
+                  <button
+                    key={img.type}
+                    onClick={() => setCarouselIdx(i)}
+                    className={`text-xs font-medium px-2 py-0.5 rounded-full transition-colors ${
+                      idx === i
+                        ? 'bg-white text-gray-900'
+                        : 'text-gray-300 hover:text-white'
+                    }`}
+                  >
+                    {img.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Top buttons: annotate + delete photo */}
+            <div className="absolute top-3 right-3 flex gap-2">
+              <button
+                onClick={onAnnotate}
+                className="bg-black/60 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-black/80"
+              >
+                ✏️ Annoter
+              </button>
+              <button
+                onClick={() => onDeletePhoto(images[idx].type)}
+                className="bg-black/60 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-red-600"
+              >
+                🗑 Photo
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="p-6 space-y-4">
+          {/* Badges */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${SEVERITY_STYLES[notif.severity]}`}
+            >
+              {SEVERITY_LABELS[notif.severity]}
+            </span>
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLES[notif.status]}`}
+            >
+              {STATUS_LABELS[notif.status]}
+            </span>
+          </div>
+
+          <h2 className="text-xl font-bold text-gray-900">{notif.title}</h2>
+
+          {notif.description && (
+            <p className="text-gray-700 whitespace-pre-wrap">{notif.description}</p>
+          )}
+
+          <div className="border-t border-gray-100 pt-4 space-y-1 text-sm text-gray-500">
+            <p>
+              <strong className="text-gray-700">Site :</strong>{' '}
+              {notif.sites?.name ?? notif.free_location ?? '📍 Libre'}
+            </p>
+            {notif.sites?.address && (
+              <p>
+                <strong className="text-gray-700">Adresse :</strong>{' '}
+                {notif.sites.address}
+              </p>
+            )}
+            <p>
+              <strong className="text-gray-700">Signalé par :</strong>{' '}
+              {notif.reporter?.full_name || 'Anonyme'}
+            </p>
+            <p>
+              <strong className="text-gray-700">Date :</strong>{' '}
+              {new Date(notif.created_at).toLocaleString('fr-FR')}
+            </p>
+          </div>
+
+          <div className="flex gap-3 border-t border-gray-100 pt-4">
+            <select
+              value={notif.status}
+              onChange={(e) => onChangeStatus(e.target.value as Incident['status'])}
+              className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700"
+            >
+              <option value="open">Ouvert</option>
+              <option value="in_progress">En cours</option>
+              <option value="resolved">Résolu</option>
+              <option value="closed">Fermé</option>
+            </select>
+            <button
+              onClick={onDelete}
+              className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+            >
+              Supprimer
+            </button>
+            <button
+              onClick={onClose}
+              className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
