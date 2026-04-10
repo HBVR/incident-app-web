@@ -93,6 +93,7 @@ export default function TeamManager({
       }
 
       setInfo(`Invitation envoyée à ${email.trim()}.`);
+      window.dispatchEvent(new Event('notifeo:usage-changed'));
       setEmail('');
 
       // Rafraîchir la liste

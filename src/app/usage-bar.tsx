@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useEffect, useState } from 'react';
 import type { Usage } from '@/lib/plan-limits';
 
 function ProgressBar({ used, max, label }: { used: number; max: number; label: string }) {
@@ -39,8 +40,30 @@ const PLAN_LABELS: Record<string, string> = {
   business: 'Business',
 };
 
-export default function UsageBar({ usage }: { usage: Usage }) {
+export default function UsageBar({ usage: initialUsage }: { usage: Usage }) {
+  const [usage, setUsage] = useState<Usage>(initialUsage);
   const isStarter = usage.plan === 'starter';
+
+  const refresh = useCallback(async () => {
+    try {
+      const resp = await fetch('/api/usage');
+      if (resp.ok) {
+        const data = await resp.json();
+        setUsage(data);
+      }
+    } catch {}
+  }, []);
+
+  // Refresh toutes les 10 secondes + écouter un event custom
+  useEffect(() => {
+    const interval = setInterval(refresh, 10000);
+    const handler = () => refresh();
+    window.addEventListener('notifeo:usage-changed', handler);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notifeo:usage-changed', handler);
+    };
+  }, [refresh]);
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 mb-6">

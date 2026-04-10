@@ -65,6 +65,7 @@ export default function SitesManager({
       setSites((prev) => [data, ...prev]);
       setName('');
       setAddress('');
+      window.dispatchEvent(new Event('notifeo:usage-changed'));
     }
   }
 
@@ -132,6 +133,7 @@ export default function SitesManager({
       .eq('id', id);
     if (error) { alert('Erreur : ' + error.message); return; }
     setSites((prev) => prev.map((s) => s.id === id ? { ...s, archived_at: new Date().toISOString() } : s));
+    window.dispatchEvent(new Event('notifeo:usage-changed'));
   }
 
   async function unarchiveSite(id: string) {
@@ -141,6 +143,7 @@ export default function SitesManager({
       .eq('id', id);
     if (error) { alert('Erreur : ' + error.message); return; }
     setSites((prev) => prev.map((s) => s.id === id ? { ...s, archived_at: null } : s));
+    window.dispatchEvent(new Event('notifeo:usage-changed'));
   }
 
   async function deleteSite(id: string) {
@@ -148,6 +151,7 @@ export default function SitesManager({
     const { error } = await supabase.from('sites').delete({ count: 'exact' }).eq('id', id);
     if (error) { alert('Erreur : ' + error.message); return; }
     setSites((prev) => prev.filter((s) => s.id !== id));
+    window.dispatchEvent(new Event('notifeo:usage-changed'));
   }
 
   return (

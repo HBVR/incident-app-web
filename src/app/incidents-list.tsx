@@ -166,6 +166,7 @@ export default function NotifsList({
     }
     setIncidents((prev) => prev.filter((i) => i.id !== id));
     if (openNotif?.id === id) setOpenNotif(null);
+    window.dispatchEvent(new Event('notifeo:usage-changed'));
   }
 
   async function moveNotif(id: string, newSiteId: string | null) {
