@@ -74,7 +74,7 @@ export default function Landing() {
           <div className="relative w-full overflow-hidden rounded-2xl shadow-2xl" style={{ paddingBottom: '56.25%' }}>
             <iframe
               className="absolute inset-0 h-full w-full"
-              src="https://www.youtube.com/embed/_lAcfXil_mY?rel=0"
+              src="https://www.youtube.com/embed/D1GDepw5sqM?rel=0"
               title="Démo Notifeo"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
