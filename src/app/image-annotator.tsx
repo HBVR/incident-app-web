@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 type Tool = 'draw' | 'text';
 
@@ -8,110 +8,79 @@ const COLORS = ['#ef4444', '#f59e0b', '#10b981', '#2563eb', '#7c3aed', '#000000'
 const BRUSH_SIZES = [2, 4, 8, 12];
 
 interface Props {
-  imageUrl: string;
+  imageUrl: string; // signed URL or blob URL
+  storagePath: string; // original storage path for server-side download on export
   onSave: (blob: Blob) => Promise<void>;
   onCancel: () => void;
 }
 
-export default function ImageAnnotator({ imageUrl, onSave, onCancel }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+export default function ImageAnnotator({ imageUrl, storagePath, onSave, onCancel }: Props) {
+  const overlayRef = useRef<HTMLCanvasElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
   const [tool, setTool] = useState<Tool>('draw');
   const [color, setColor] = useState('#ef4444');
   const [brushSize, setBrushSize] = useState(4);
   const [isDrawing, setIsDrawing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  // Text
   const [textInput, setTextInput] = useState('');
   const [textPos, setTextPos] = useState<{ x: number; y: number } | null>(null);
 
-  // Store drawing history for undo
+  // Undo stack (store overlay snapshots)
   const historyRef = useRef<ImageData[]>([]);
-  const bgImageRef = useRef<HTMLImageElement | null>(null);
 
-  // Canvas dimensions
-  const [dims, setDims] = useState({ width: 800, height: 600 });
-
-  // Load image onto canvas (imageUrl is already a local blob URL, no CORS issue)
-  useEffect(() => {
-    let cancelled = false;
-    const img = new Image();
-    img.onload = () => {
-      if (cancelled) return;
-      bgImageRef.current = img;
-
-      const maxW = Math.min(900, window.innerWidth - 32);
-      const scale = maxW / img.width;
-      const w = Math.round(img.width * scale);
-      const h = Math.round(img.height * scale);
-      setDims({ width: w, height: h });
-
-      setTimeout(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(img, 0, 0, w, h);
-        historyRef.current = [ctx.getImageData(0, 0, w, h)];
-        setLoaded(true);
-      }, 50);
-    };
-    img.onerror = () => {
-      if (!cancelled) setLoaded(true);
-    };
-    img.src = imageUrl;
-    return () => { cancelled = true; };
-  }, [imageUrl]);
-
-  // Save current state to history
-  const saveToHistory = useCallback(() => {
-    const canvas = canvasRef.current;
+  function saveToHistory() {
+    const canvas = overlayRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d')!;
     historyRef.current.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
-    // Keep max 30 states
     if (historyRef.current.length > 30) historyRef.current.shift();
-  }, []);
-
-  // Undo
-  function undo() {
-    const canvas = canvasRef.current;
-    if (!canvas || historyRef.current.length <= 1) return;
-    historyRef.current.pop(); // Remove current
-    const prev = historyRef.current[historyRef.current.length - 1];
-    const ctx = canvas.getContext('2d')!;
-    ctx.putImageData(prev, 0, 0);
   }
 
-  // Get position from mouse/touch event
+  function undo() {
+    const canvas = overlayRef.current;
+    if (!canvas || historyRef.current.length === 0) return;
+    historyRef.current.pop();
+    const ctx = canvas.getContext('2d')!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (historyRef.current.length > 0) {
+      ctx.putImageData(historyRef.current[historyRef.current.length - 1], 0, 0);
+    }
+  }
+
+  // Sync overlay canvas size with displayed image
+  function onImageLoad() {
+    const img = imgRef.current;
+    const canvas = overlayRef.current;
+    if (!img || !canvas) return;
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    setImgLoaded(true);
+  }
+
   function getPos(e: React.MouseEvent | React.TouchEvent) {
-    const canvas = canvasRef.current!;
+    const canvas = overlayRef.current!;
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     if ('touches' in e) {
-      const touch = e.touches[0];
-      return {
-        x: (touch.clientX - rect.left) * scaleX,
-        y: (touch.clientY - rect.top) * scaleY,
-      };
+      const t = e.touches[0];
+      return { x: (t.clientX - rect.left) * scaleX, y: (t.clientY - rect.top) * scaleY };
     }
-    return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
-    };
+    return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
   }
 
-  // Drawing
   function startDraw(e: React.MouseEvent | React.TouchEvent) {
     if (tool === 'text') {
-      const pos = getPos(e);
-      setTextPos(pos);
+      setTextPos(getPos(e));
       setTextInput('');
       return;
     }
-    const canvas = canvasRef.current!;
+    const canvas = overlayRef.current!;
     const ctx = canvas.getContext('2d')!;
     const pos = getPos(e);
     ctx.beginPath();
@@ -126,8 +95,7 @@ export default function ImageAnnotator({ imageUrl, onSave, onCancel }: Props) {
   function draw(e: React.MouseEvent | React.TouchEvent) {
     if (!isDrawing || tool !== 'draw') return;
     e.preventDefault();
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = overlayRef.current!.getContext('2d')!;
     const pos = getPos(e);
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
@@ -140,15 +108,14 @@ export default function ImageAnnotator({ imageUrl, onSave, onCancel }: Props) {
     }
   }
 
-  // Add text at position
   function addText() {
     if (!textPos || !textInput.trim()) {
       setTextPos(null);
       return;
     }
-    const canvas = canvasRef.current!;
+    const canvas = overlayRef.current!;
     const ctx = canvas.getContext('2d')!;
-    const fontSize = Math.max(16, Math.round(canvas.width / 30));
+    const fontSize = Math.max(20, Math.round(canvas.width / 25));
     ctx.font = `bold ${fontSize}px Arial`;
     ctx.fillStyle = color;
     ctx.strokeStyle = color === '#ffffff' ? '#000000' : '#ffffff';
@@ -160,38 +127,53 @@ export default function ImageAnnotator({ imageUrl, onSave, onCancel }: Props) {
     setTextInput('');
   }
 
-  // Export and save
   async function handleSave() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
     setSaving(true);
-    canvas.toBlob(
-      async (blob) => {
-        if (!blob) {
-          setSaving(false);
-          return;
-        }
-        await onSave(blob);
-        setSaving(false);
-      },
-      'image/jpeg',
-      0.85
-    );
-  }
+    try {
+      // Download original image via our server-side proxy (no CORS)
+      const proxyResp = await fetch(
+        `/api/image-proxy?path=${encodeURIComponent(storagePath)}`
+      );
+      if (!proxyResp.ok) throw new Error('Failed to download image for export');
+      const imgBlob = await proxyResp.blob();
 
-  if (!loaded) {
-    return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80">
-        <p className="text-white">Chargement de l&apos;éditeur...</p>
-      </div>
-    );
+      // Load original into a fresh canvas
+      const origImg = await createImageBitmap(imgBlob);
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = origImg.width;
+      exportCanvas.height = origImg.height;
+      const ctx = exportCanvas.getContext('2d')!;
+
+      // Draw original image
+      ctx.drawImage(origImg, 0, 0);
+
+      // Draw overlay annotations on top
+      const overlay = overlayRef.current;
+      if (overlay) {
+        ctx.drawImage(overlay, 0, 0, origImg.width, origImg.height);
+      }
+
+      // Export
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        exportCanvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error('Export failed'))),
+          'image/jpeg',
+          0.85
+        );
+      });
+
+      await onSave(blob);
+    } catch (e) {
+      alert('Erreur : ' + (e instanceof Error ? e.message : e));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col bg-gray-900">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2 bg-gray-800 px-3 py-2 border-b border-gray-700">
-        {/* Tools */}
         <button
           onClick={() => setTool('draw')}
           className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
@@ -211,7 +193,6 @@ export default function ImageAnnotator({ imageUrl, onSave, onCancel }: Props) {
 
         <div className="w-px h-6 bg-gray-600 mx-1" />
 
-        {/* Colors */}
         {COLORS.map((c) => (
           <button
             key={c}
@@ -225,7 +206,6 @@ export default function ImageAnnotator({ imageUrl, onSave, onCancel }: Props) {
 
         <div className="w-px h-6 bg-gray-600 mx-1" />
 
-        {/* Brush size */}
         {BRUSH_SIZES.map((s) => (
           <button
             key={s}
@@ -234,10 +214,7 @@ export default function ImageAnnotator({ imageUrl, onSave, onCancel }: Props) {
               brushSize === s ? 'bg-blue-600' : 'bg-gray-700'
             }`}
           >
-            <span
-              className="rounded-full bg-white"
-              style={{ width: s + 2, height: s + 2 }}
-            />
+            <span className="rounded-full bg-white" style={{ width: s + 2, height: s + 2 }} />
           </button>
         ))}
 
@@ -267,32 +244,50 @@ export default function ImageAnnotator({ imageUrl, onSave, onCancel }: Props) {
         </button>
       </div>
 
-      {/* Canvas area */}
-      <div
-        ref={containerRef}
-        className="flex-1 overflow-auto flex items-center justify-center p-4"
-      >
-        <div className="relative">
-          <canvas
-            ref={canvasRef}
-            style={{ width: dims.width, height: dims.height, touchAction: 'none' }}
-            className="rounded-lg shadow-2xl cursor-crosshair"
-            onMouseDown={startDraw}
-            onMouseMove={draw}
-            onMouseUp={stopDraw}
-            onMouseLeave={stopDraw}
-            onTouchStart={startDraw}
-            onTouchMove={draw}
-            onTouchEnd={stopDraw}
+      {/* Canvas area: img background + transparent canvas overlay */}
+      <div ref={containerRef} className="flex-1 overflow-auto flex items-center justify-center p-4">
+        <div className="relative inline-block">
+          {/* Background image (always loads, no CORS issue for display) */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            ref={imgRef}
+            src={imageUrl}
+            alt="Photo"
+            onLoad={onImageLoad}
+            className="max-w-full max-h-[75vh] rounded-lg"
+            style={{ display: imgLoaded ? 'block' : 'none' }}
           />
+          {!imgLoaded && (
+            <p className="text-white py-12">Chargement de l&apos;image...</p>
+          )}
+
+          {/* Drawing overlay (transparent canvas on top) */}
+          {imgLoaded && (
+            <canvas
+              ref={overlayRef}
+              className="absolute top-0 left-0 w-full h-full cursor-crosshair rounded-lg"
+              style={{ touchAction: 'none' }}
+              onMouseDown={startDraw}
+              onMouseMove={draw}
+              onMouseUp={stopDraw}
+              onMouseLeave={stopDraw}
+              onTouchStart={startDraw}
+              onTouchMove={draw}
+              onTouchEnd={stopDraw}
+            />
+          )}
 
           {/* Text input overlay */}
-          {textPos && (
+          {textPos && overlayRef.current && (
             <div
-              className="absolute"
+              className="absolute z-10"
               style={{
-                left: (textPos.x / canvasRef.current!.width) * dims.width,
-                top: (textPos.y / canvasRef.current!.height) * dims.height,
+                left:
+                  (textPos.x / overlayRef.current.width) *
+                  (imgRef.current?.clientWidth ?? 1),
+                top:
+                  (textPos.y / overlayRef.current.height) *
+                  (imgRef.current?.clientHeight ?? 1),
               }}
             >
               <div className="flex gap-1">

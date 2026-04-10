@@ -305,19 +305,9 @@ export default function NotifsList({
           carouselIdx={carouselIdx}
           setCarouselIdx={setCarouselIdx}
           onClose={() => { setOpenNotif(null); setCarouselIdx(0); }}
-          onAnnotate={async () => {
-            if (!openNotif.photo_url) return;
-            try {
-              // Proxy via notre API server-side (pas de CORS)
-              const resp = await fetch(
-                `/api/image-proxy?path=${encodeURIComponent(openNotif.photo_url)}`
-              );
-              if (!resp.ok) throw new Error('Download failed');
-              const blob = await resp.blob();
-              setAnnotatorBlobUrl(URL.createObjectURL(blob));
+          onAnnotate={() => {
+            if (photoUrls[openNotif.id]) {
               setShowAnnotator(true);
-            } catch (e) {
-              alert('Impossible de charger l\'image : ' + (e instanceof Error ? e.message : e));
             }
           }}
           onChangeStatus={(status) => {
@@ -330,13 +320,12 @@ export default function NotifsList({
       )}
 
       {/* ====== ANNOTATEUR D'IMAGE ====== */}
-      {showAnnotator && openNotif && annotatorBlobUrl && (
+      {showAnnotator && openNotif && photoUrls[openNotif.id] && openNotif.photo_url && (
         <ImageAnnotator
-          imageUrl={annotatorBlobUrl}
+          imageUrl={photoUrls[openNotif.id]}
+          storagePath={openNotif.photo_url}
           onCancel={() => {
             setShowAnnotator(false);
-            if (annotatorBlobUrl) URL.revokeObjectURL(annotatorBlobUrl);
-            setAnnotatorBlobUrl(null);
           }}
           onSave={async (blob) => {
             const notifId = openNotif.id;
@@ -366,8 +355,6 @@ export default function NotifsList({
             }
 
             setShowAnnotator(false);
-            if (annotatorBlobUrl) URL.revokeObjectURL(annotatorBlobUrl);
-            setAnnotatorBlobUrl(null);
             setCarouselIdx(1);
           }}
         />
