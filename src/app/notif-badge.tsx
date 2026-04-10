@@ -104,12 +104,12 @@ export default function NotifBadge() {
 }
 
 function setFavicon(url: string) {
-  let link = document.querySelector<HTMLLinkElement>('link[rel="icon"][data-dynamic]');
-  if (!link) {
-    link = document.createElement('link');
-    link.rel = 'icon';
-    link.setAttribute('data-dynamic', 'true');
-    document.head.appendChild(link);
-  }
+  // Supprimer tous les favicons existants (y compris ceux générés par Next.js)
+  document.querySelectorAll<HTMLLinkElement>('link[rel="icon"]').forEach((el) => el.remove());
+
+  const link = document.createElement('link');
+  link.rel = 'icon';
+  link.type = 'image/png';
   link.href = url;
+  document.head.appendChild(link);
 }
