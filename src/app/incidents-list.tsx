@@ -65,21 +65,13 @@ export default function NotifsList({
   const isManager = currentUserRole === 'manager' || currentUserRole === 'admin';
   const supabase = createClient();
   const [incidents, setIncidents] = useState<Incident[]>(initialNotifs);
-  const [readIds, setReadIds] = useState<Set<string>>(() => {
-    if (typeof window === 'undefined') return new Set();
-    try {
-      const stored = localStorage.getItem('notifeo_read_notifs');
-      return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch { return new Set(); }
+  const [lastSeen] = useState<string>(() => {
+    if (typeof window === 'undefined') return new Date().toISOString();
+    return localStorage.getItem('notifeo_last_seen') ?? new Date().toISOString();
   });
 
-  function markAsRead(id: string) {
-    setReadIds((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      localStorage.setItem('notifeo_read_notifs', JSON.stringify([...next]));
-      return next;
-    });
+  function isNew(inc: Incident) {
+    return inc.created_at > lastSeen;
   }
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [siteFilter, setSiteFilter] = useState<string | null>(null); // null = tous
@@ -313,7 +305,7 @@ export default function NotifsList({
           <article
             key={inc.id}
             className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm cursor-pointer hover:border-blue-200 hover:shadow-md transition-all"
-            onClick={() => { setOpenNotif(inc); markAsRead(inc.id); }}
+            onClick={() => setOpenNotif(inc)}
           >
             <div className="flex gap-5">
               {(photoUrls[inc.id] || annotatedUrls[inc.id]) && (
@@ -328,7 +320,7 @@ export default function NotifsList({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      {!readIds.has(inc.id) && (
+                      {isNew(inc) && (
                         <span className="rounded-full bg-blue-500 px-1.5 py-0.5 text-[9px] font-bold text-white leading-none">
                           NEW
                         </span>
