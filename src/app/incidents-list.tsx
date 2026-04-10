@@ -255,10 +255,10 @@ export default function NotifsList({
             onClick={() => setOpenNotif(inc)}
           >
             <div className="flex gap-5">
-              {photoUrls[inc.id] && (
+              {(photoUrls[inc.id] || annotatedUrls[inc.id]) && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={photoUrls[inc.id]}
+                  src={photoUrls[inc.id] || annotatedUrls[inc.id]}
                   alt=""
                   className="h-20 w-20 flex-shrink-0 rounded-lg object-cover bg-gray-100"
                 />
@@ -335,7 +335,7 @@ export default function NotifsList({
           setCarouselIdx={setCarouselIdx}
           onClose={() => { setOpenNotif(null); setCarouselIdx(0); }}
           onAnnotate={() => {
-            if (photoUrls[openNotif.id]) {
+            if (photoUrls[openNotif.id] || annotatedUrls[openNotif.id]) {
               setShowAnnotator(true);
             }
           }}
@@ -349,10 +349,10 @@ export default function NotifsList({
       )}
 
       {/* ====== ANNOTATEUR D'IMAGE ====== */}
-      {showAnnotator && openNotif && photoUrls[openNotif.id] && openNotif.photo_url && (
+      {showAnnotator && openNotif && (photoUrls[openNotif.id] || annotatedUrls[openNotif.id]) && (openNotif.photo_url || openNotif.annotated_photo_url) && (
         <ImageAnnotator
-          imageUrl={photoUrls[openNotif.id]}
-          storagePath={openNotif.photo_url}
+          imageUrl={photoUrls[openNotif.id] || annotatedUrls[openNotif.id] || ''}
+          storagePath={openNotif.photo_url || openNotif.annotated_photo_url || ''}
           onCancel={() => {
             setShowAnnotator(false);
           }}
