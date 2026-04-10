@@ -41,7 +41,7 @@ export default function Landing() {
         <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600">
           L&apos;outil de signalement terrain le plus simple du marché.
           Vos employés signalent en 10 secondes, vous êtes alerté en temps réel.
-          Zéro app à installer.
+          Échangez directement sur chaque signalement. Zéro app à installer.
         </p>
         <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <Link
@@ -121,12 +121,14 @@ export default function Landing() {
           <h2 className="text-center text-3xl font-bold text-gray-900">
             Pourquoi Notifeo
           </h2>
-          <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4">
+          <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
             {[
               { icon: '⚡', title: 'Zéro installation', desc: 'Fonctionne dans le navigateur. Aucune app à télécharger.' },
               { icon: '📸', title: 'Photo + annotation', desc: 'Prenez une photo, dessinez dessus, ajoutez du texte.' },
+              { icon: '💬', title: 'Conversation intégrée', desc: 'Discutez directement sur chaque signalement. Historique complet.' },
               { icon: '👥', title: 'Multi-sites', desc: 'Gérez autant de sites et d\'employés que nécessaire.' },
-              { icon: '🔒', title: 'Sécurisé', desc: 'Données isolées par organisation. Hébergé en Europe.' },
+              { icon: '🔔', title: 'Alertes en temps réel', desc: 'Badge et compteur de nouvelles notifs. Rien ne vous échappe.' },
+              { icon: '🔒', title: 'Sécurisé & RGPD', desc: 'Données isolées par organisation. Hébergé en Europe.' },
             ].map((item) => (
               <div key={item.title} className="text-center">
                 <div className="text-3xl">{item.icon}</div>
