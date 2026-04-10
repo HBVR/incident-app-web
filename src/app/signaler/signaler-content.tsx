@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { resizeImage } from '@/lib/resize-image';
+import InstallButton from '../install-button';
 
 type Site = {
   id: string;
@@ -259,12 +260,15 @@ export default function SignalerContent() {
           priority
           className="h-8 w-auto"
         />
-        <button
-          onClick={() => router.push('/')}
-          className="text-sm font-medium text-blue-600"
-        >
-          Dashboard
-        </button>
+        <div className="flex items-center gap-4">
+          <InstallButton />
+          <button
+            onClick={() => router.push('/')}
+            className="text-sm font-medium text-blue-600"
+          >
+            Dashboard
+          </button>
+        </div>
       </header>
 
       <div className="mx-auto max-w-lg px-4 py-6">
