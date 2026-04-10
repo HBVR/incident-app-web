@@ -7,12 +7,14 @@ import type { Usage } from '@/lib/plan-limits';
 export default function DashboardShell({
   orgName,
   email,
+  role,
   usage,
   activeTab,
   children,
 }: {
   orgName: string;
   email: string;
+  role: string;
   usage: Usage;
   activeTab: 'notifs' | 'sites' | 'team';
   children: React.ReactNode;
@@ -38,6 +40,13 @@ export default function DashboardShell({
             />
             <div className="hidden sm:flex items-center gap-2 border-l border-gray-200 pl-4">
               <span className="text-sm font-semibold text-gray-900">{orgName}</span>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                role === 'admin' ? 'bg-purple-100 text-purple-700' :
+                role === 'manager' ? 'bg-blue-100 text-blue-700' :
+                'bg-gray-100 text-gray-600'
+              }`}>
+                {role === 'admin' ? 'Admin' : role === 'manager' ? 'Manager' : 'Employé'}
+              </span>
               <span className="text-xs text-gray-400">{email}</span>
             </div>
           </div>

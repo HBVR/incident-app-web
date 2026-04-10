@@ -32,6 +32,7 @@ export default async function TeamPage() {
     <DashboardShell
       orgName={org?.name ?? 'Organisation'}
       email={user?.email ?? ''}
+      role={(profile?.role as string) ?? 'employee'}
       usage={usage}
       activeTab="team"
     >

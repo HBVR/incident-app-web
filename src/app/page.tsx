@@ -46,6 +46,7 @@ export default async function DashboardPage() {
     <DashboardShell
       orgName={org?.name ?? 'Organisation'}
       email={user.email ?? ''}
+      role={(profile?.role as string) ?? 'employee'}
       usage={usage}
       activeTab="notifs"
     >
