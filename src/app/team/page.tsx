@@ -47,6 +47,7 @@ export default async function TeamPage() {
         initialMembers={members ?? []}
         canInvite={canInvite}
         currentUserId={user!.id}
+        currentUserRole={(profile?.role as string) ?? 'employee'}
         canInviteByPlan={usage.canInviteUser}
       />
     </DashboardShell>

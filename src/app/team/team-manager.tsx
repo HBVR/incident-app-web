@@ -27,13 +27,16 @@ export default function TeamManager({
   initialMembers,
   canInvite,
   currentUserId,
+  currentUserRole,
   canInviteByPlan = true,
 }: {
   initialMembers: Member[];
   canInvite: boolean;
   currentUserId: string;
+  currentUserRole?: string;
   canInviteByPlan?: boolean;
 }) {
+  const isAdmin = currentUserRole === 'admin' || currentUserRole === 'manager';
   const supabase = createClient();
   const [members, setMembers] = useState<Member[]>(initialMembers);
   const [email, setEmail] = useState('');
@@ -109,6 +112,22 @@ export default function TeamManager({
     }
   }
 
+  async function removeMember(id: string, name: string) {
+    if (!confirm(`Retirer ${name || 'ce membre'} de l'organisation ? Ses notifs seront réattribuées à vous.`)) return;
+    const resp = await fetch('/api/remove-member', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memberId: id }),
+    });
+    const result = await resp.json();
+    if (!resp.ok) {
+      alert(result.error || 'Erreur');
+      return;
+    }
+    setMembers((prev) => prev.filter((m) => m.id !== id));
+    window.dispatchEvent(new Event('notifeo:usage-changed'));
+  }
+
   return (
     <div className="space-y-6">
       {canInvite && (
@@ -170,6 +189,11 @@ export default function TeamManager({
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 Rôle
               </th>
+              {isAdmin && (
+                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -189,6 +213,18 @@ export default function TeamManager({
                     {ROLE_LABELS[m.role]}
                   </span>
                 </td>
+                {isAdmin && (
+                  <td className="px-6 py-4 text-right">
+                    {m.id !== currentUserId && (
+                      <button
+                        onClick={() => removeMember(m.id, m.full_name ?? m.email ?? '')}
+                        className="text-xs text-gray-400 hover:text-red-600 font-medium"
+                      >
+                        Retirer
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
