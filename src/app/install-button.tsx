@@ -70,7 +70,7 @@ export default function InstallButton() {
             d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15M9 12l3 3m0 0 3-3m-3 3V2.25"
           />
         </svg>
-        Installer
+        Installer l&apos;app
       </button>
 
       {showModal && (
@@ -84,7 +84,7 @@ export default function InstallButton() {
           >
             <div className="p-6 space-y-4">
               <h2 className="text-xl font-bold text-gray-900">
-                Installer Notifeo
+                Ajouter à l&apos;écran d&apos;accueil
               </h2>
               <p className="text-sm text-gray-600">
                 Ajoutez Notifeo à votre écran d&apos;accueil pour un accès
@@ -97,7 +97,7 @@ export default function InstallButton() {
                   onClick={handleNativeInstall}
                   className="w-full rounded-xl bg-blue-600 py-3 text-base font-semibold text-white hover:bg-blue-700"
                 >
-                  Installer Notifeo
+                  Ajouter à l&apos;écran d&apos;accueil
                 </button>
               )}
 
@@ -109,8 +109,8 @@ export default function InstallButton() {
                       <p className="font-semibold text-gray-900">Chrome / Edge</p>
                       <ol className="text-sm text-gray-700 space-y-1 list-decimal pl-4">
                         <li>Appuyez sur le menu <strong>⋮</strong> (3 points en haut à droite)</li>
-                        <li>Sélectionnez <strong>&quot;Installer l&apos;application&quot;</strong></li>
-                        <li>Confirmez l&apos;installation</li>
+                        <li>Sélectionnez <strong>&quot;Ajouter à l&apos;écran d&apos;accueil&quot;</strong></li>
+                        <li>Confirmez</li>
                       </ol>
                     </>
                   )}
@@ -122,8 +122,8 @@ export default function InstallButton() {
                         Pour la meilleure expérience :
                       </p>
                       <ol className="text-sm text-gray-700 space-y-1 list-decimal pl-4">
-                        <li>Ouvrez <strong>app.notifeo.fr</strong> dans <strong>Chrome</strong> ou <strong>Edge</strong></li>
-                        <li>Menu ⋮ → <strong>&quot;Installer l&apos;application&quot;</strong></li>
+                        <li>Appuyez sur le menu <strong>⋮</strong> (3 points en haut à droite)</li>
+                        <li>Sélectionnez <strong>&quot;Ajouter à l&apos;écran d&apos;accueil&quot;</strong></li>
                       </ol>
                       <p className="text-xs text-gray-500 mt-2">
                         Ou sur Android : menu ⋮ → <strong>&quot;Ajouter à l&apos;écran d&apos;accueil&quot;</strong>
@@ -146,7 +146,7 @@ export default function InstallButton() {
                       <p className="font-semibold text-gray-900">Installation</p>
                       <p className="text-sm text-gray-700">
                         Ouvrez <strong>app.notifeo.fr</strong> dans Chrome, Edge ou Safari
-                        et utilisez l&apos;option &quot;Installer&quot; ou &quot;Ajouter à l&apos;écran d&apos;accueil&quot;
+                        et utilisez l&apos;option &quot;Ajouter à l&apos;écran d&apos;accueil&quot;
                         du menu de votre navigateur.
                       </p>
                     </>
