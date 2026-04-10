@@ -58,7 +58,7 @@ export default function Landing() {
           </a>
         </div>
         <p className="mt-4 text-sm text-gray-400">
-          Gratuit jusqu&apos;à 5 utilisateurs · Aucune carte bancaire requise
+          Gratuit jusqu&apos;à 3 utilisateurs · Aucune carte bancaire requise
         </p>
       </section>
 
@@ -157,8 +157,8 @@ export default function Landing() {
               </div>
               <ul className="mt-6 space-y-3 text-sm text-gray-600">
                 <li>✓ 1 site</li>
-                <li>✓ 5 utilisateurs</li>
-                <li>✓ 50 notifs/mois</li>
+                <li>✓ 3 utilisateurs</li>
+                <li>✓ 20 notifs/mois</li>
                 <li>✓ Photos + annotations</li>
               </ul>
               <Link
@@ -179,9 +179,9 @@ export default function Landing() {
                 <span className="text-gray-500">/mois</span>
               </div>
               <ul className="mt-6 space-y-3 text-sm text-gray-600">
-                <li>✓ Sites illimités</li>
-                <li>✓ Utilisateurs illimités</li>
-                <li>✓ Notifs illimitées</li>
+                <li>✓ 10 sites</li>
+                <li>✓ 25 utilisateurs</li>
+                <li>✓ 500 notifs/mois</li>
                 <li>✓ Analytics + export CSV</li>
                 <li>✓ Support prioritaire</li>
               </ul>

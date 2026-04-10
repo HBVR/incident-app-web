@@ -3,8 +3,8 @@ import { SupabaseClient } from '@supabase/supabase-js';
 export type PlanName = 'starter' | 'pro' | 'business';
 
 export const PLAN_LIMITS: Record<PlanName, { max_sites: number; max_users: number; max_notifs_month: number }> = {
-  starter: { max_sites: 1, max_users: 5, max_notifs_month: 50 },
-  pro: { max_sites: -1, max_users: -1, max_notifs_month: -1 },
+  starter: { max_sites: 1, max_users: 3, max_notifs_month: 20 },
+  pro: { max_sites: 10, max_users: 25, max_notifs_month: 500 },
   business: { max_sites: -1, max_users: -1, max_notifs_month: -1 },
 };
 
