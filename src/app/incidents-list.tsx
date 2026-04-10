@@ -65,6 +65,22 @@ export default function NotifsList({
   const isManager = currentUserRole === 'manager' || currentUserRole === 'admin';
   const supabase = createClient();
   const [incidents, setIncidents] = useState<Incident[]>(initialNotifs);
+  const [readIds, setReadIds] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const stored = localStorage.getItem('notifeo_read_notifs');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  function markAsRead(id: string) {
+    setReadIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      localStorage.setItem('notifeo_read_notifs', JSON.stringify([...next]));
+      return next;
+    });
+  }
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [siteFilter, setSiteFilter] = useState<string | null>(null); // null = tous
   const [openNotif, setOpenNotif] = useState<Incident | null>(null); // modal
@@ -297,7 +313,7 @@ export default function NotifsList({
           <article
             key={inc.id}
             className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm cursor-pointer hover:border-blue-200 hover:shadow-md transition-all"
-            onClick={() => setOpenNotif(inc)}
+            onClick={() => { setOpenNotif(inc); markAsRead(inc.id); }}
           >
             <div className="flex gap-5">
               {(photoUrls[inc.id] || annotatedUrls[inc.id]) && (
@@ -312,6 +328,9 @@ export default function NotifsList({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      {!readIds.has(inc.id) && (
+                        <span className="flex h-2 w-2 rounded-full bg-blue-500" title="Nouveau" />
+                      )}
                       <span
                         className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${SEVERITY_STYLES[inc.severity]}`}
                       >
