@@ -46,10 +46,14 @@ const STATUS_STYLES: Record<Incident['status'], string> = {
   closed: 'bg-gray-100 text-gray-700',
 };
 
+type SiteOption = { id: string; name: string };
+
 export default function NotifsList({
   initialNotifs,
+  sites = [],
 }: {
   initialNotifs: Incident[];
+  sites?: SiteOption[];
 }) {
   const supabase = createClient();
   const [incidents, setIncidents] = useState<Incident[]>(initialNotifs);
@@ -154,6 +158,28 @@ export default function NotifsList({
     }
     setIncidents((prev) => prev.filter((i) => i.id !== id));
     if (openNotif?.id === id) setOpenNotif(null);
+  }
+
+  async function moveNotif(id: string, newSiteId: string | null) {
+    const siteName = newSiteId
+      ? sites.find((s) => s.id === newSiteId)?.name ?? null
+      : null;
+    setIncidents((prev) =>
+      prev.map((i) =>
+        i.id === id
+          ? { ...i, site_id: newSiteId, sites: siteName ? { name: siteName, address: null } : null }
+          : i
+      )
+    );
+    await supabase
+      .from('incidents')
+      .update({ site_id: newSiteId })
+      .eq('id', id);
+    if (openNotif?.id === id) {
+      setOpenNotif((prev) =>
+        prev ? { ...prev, sites: siteName ? { name: siteName, address: null } : null } : null
+      );
+    }
   }
 
   async function deletePhoto(notif: Incident, type: 'original' | 'annotated') {
@@ -355,6 +381,8 @@ export default function NotifsList({
           }}
           onDelete={() => deleteNotif(openNotif.id)}
           onDeletePhoto={(type) => deletePhoto(openNotif, type)}
+          sites={sites}
+          onMove={(siteId) => moveNotif(openNotif.id, siteId)}
         />
       )}
 
@@ -428,6 +456,8 @@ function ModalDetail({
   onChangeStatus,
   onDelete,
   onDeletePhoto,
+  sites = [],
+  onMove,
 }: {
   notif: Incident;
   photoUrl?: string;
@@ -439,6 +469,8 @@ function ModalDetail({
   onChangeStatus: (status: Incident['status']) => void;
   onDelete: () => void;
   onDeletePhoto: (type: 'original' | 'annotated') => void;
+  sites?: SiteOption[];
+  onMove?: (siteId: string | null) => void;
 }) {
   // Build carousel images
   const images: { url: string; label: string; type: 'original' | 'annotated' }[] = [];
@@ -545,6 +577,30 @@ function ModalDetail({
               {new Date(notif.created_at).toLocaleString('fr-FR')}
             </p>
           </div>
+
+          {/* Déplacer vers un autre site */}
+          {onMove && sites.length > 0 && (
+            <div className="border-t border-gray-100 pt-4">
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                Déplacer vers
+              </label>
+              <select
+                value={notif.sites?.name ? sites.find((s) => s.name === notif.sites?.name)?.id ?? '' : '__free__'}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  onMove(val === '__free__' ? null : val);
+                }}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700"
+              >
+                <option value="__free__">📍 Signalement libre</option>
+                {sites.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex gap-3 border-t border-gray-100 pt-4">
             <select

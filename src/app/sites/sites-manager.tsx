@@ -10,6 +10,8 @@ type Site = {
   address: string | null;
   qr_token: string;
   created_at: string;
+  archived_at: string | null;
+  created_by: string | null;
 };
 
 export default function SitesManager({
@@ -25,6 +27,7 @@ export default function SitesManager({
   const [address, setAddress] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   async function createSite(e: React.FormEvent) {
     e.preventDefault();
@@ -38,7 +41,7 @@ export default function SitesManager({
         address: address.trim() || null,
         organization_id: organizationId,
       })
-      .select('id, name, address, qr_token, created_at')
+      .select('id, name, address, qr_token, created_at, archived_at, created_by')
       .single();
 
     setSubmitting(false);
@@ -110,8 +113,18 @@ export default function SitesManager({
     link.click();
   }
 
+  async function archiveSite(id: string) {
+    await supabase.from('sites').update({ archived_at: new Date().toISOString() }).eq('id', id);
+    setSites((prev) => prev.map((s) => s.id === id ? { ...s, archived_at: new Date().toISOString() } : s));
+  }
+
+  async function unarchiveSite(id: string) {
+    await supabase.from('sites').update({ archived_at: null }).eq('id', id);
+    setSites((prev) => prev.map((s) => s.id === id ? { ...s, archived_at: null } : s));
+  }
+
   async function deleteSite(id: string) {
-    if (!confirm('Supprimer ce site ? Les incidents associés seront aussi supprimés.')) return;
+    if (!confirm('Supprimer ce site définitivement ? Les notifs associées seront aussi supprimées.')) return;
     await supabase.from('sites').delete().eq('id', id);
     setSites((prev) => prev.filter((s) => s.id !== id));
   }
@@ -165,40 +178,89 @@ export default function SitesManager({
         </button>
       </form>
 
-      {/* Liste des sites */}
-      {sites.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center">
-          <p className="text-gray-500">Aucun site créé pour l&apos;instant.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {sites.map((site) => (
-            <article
-              key={site.id}
-              className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
-            >
-              <h3 className="text-lg font-semibold text-gray-900">{site.name}</h3>
-              {site.address && (
-                <p className="text-sm text-gray-500 mt-0.5">{site.address}</p>
-              )}
-              <div className="mt-4 flex gap-2">
-                <button
-                  onClick={() => downloadQR(site)}
-                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
-                >
-                  Télécharger le QR
-                </button>
-                <button
-                  onClick={() => deleteSite(site.id)}
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Supprimer
-                </button>
+      {/* Sites actifs */}
+      {(() => {
+        const activeSites = sites.filter((s) => !s.archived_at);
+        const archivedSites = sites.filter((s) => s.archived_at);
+        return (
+          <>
+            {activeSites.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center">
+                <p className="text-gray-500">Aucun site actif.</p>
               </div>
-            </article>
-          ))}
-        </div>
-      )}
+            ) : (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {activeSites.map((site) => (
+                  <article
+                    key={site.id}
+                    className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+                  >
+                    <h3 className="text-lg font-semibold text-gray-900">{site.name}</h3>
+                    {site.address && (
+                      <p className="text-sm text-gray-500 mt-0.5">{site.address}</p>
+                    )}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => downloadQR(site)}
+                        className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
+                      >
+                        Télécharger le QR
+                      </button>
+                      <button
+                        onClick={() => archiveSite(site.id)}
+                        className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        Archiver
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+
+            {/* Sites archivés */}
+            {archivedSites.length > 0 && (
+              <div className="space-y-3">
+                <button
+                  onClick={() => setShowArchived(!showArchived)}
+                  className="text-sm font-medium text-gray-500 hover:text-gray-700"
+                >
+                  {showArchived ? '▼' : '▶'} Sites archivés ({archivedSites.length})
+                </button>
+                {showArchived && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {archivedSites.map((site) => (
+                      <article
+                        key={site.id}
+                        className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-5"
+                      >
+                        <h3 className="text-lg font-semibold text-gray-500">{site.name}</h3>
+                        {site.address && (
+                          <p className="text-sm text-gray-400 mt-0.5">{site.address}</p>
+                        )}
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <button
+                            onClick={() => unarchiveSite(site.id)}
+                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white"
+                          >
+                            Restaurer
+                          </button>
+                          <button
+                            onClick={() => deleteSite(site.id)}
+                            className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-500 hover:bg-red-50"
+                          >
+                            Supprimer
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }

@@ -20,7 +20,8 @@ export default async function SitesPage() {
 
   const { data: sites } = await supabase
     .from('sites')
-    .select('id, name, address, qr_token, created_at')
+    .select('id, name, address, qr_token, created_at, archived_at, created_by')
+    .order('archived_at', { ascending: true, nullsFirst: true })
     .order('created_at', { ascending: false });
 
   const orgName =

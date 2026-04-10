@@ -25,6 +25,12 @@ export default async function DashboardPage() {
     )
     .order('created_at', { ascending: false });
 
+  const { data: allSites } = await supabase
+    .from('sites')
+    .select('id, name')
+    .is('archived_at', null)
+    .order('name');
+
   const orgName =
     (profile?.organizations as unknown as { name: string } | null)?.name ??
     'Organisation';
@@ -77,6 +83,7 @@ export default async function DashboardPage() {
         </div>
         <NotifsList
           initialNotifs={(incidents as unknown as import('./incidents-list').Incident[]) ?? []}
+          sites={(allSites as { id: string; name: string }[]) ?? []}
         />
       </div>
     </main>
