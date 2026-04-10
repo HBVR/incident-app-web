@@ -175,7 +175,7 @@ export default function Landing() {
               </div>
               <h3 className="text-lg font-bold text-gray-900">Pro</h3>
               <div className="mt-4">
-                <span className="text-4xl font-extrabold text-gray-900">49€</span>
+                <span className="text-4xl font-extrabold text-gray-900">19€</span>
                 <span className="text-gray-500">/mois</span>
               </div>
               <ul className="mt-6 space-y-3 text-sm text-gray-600">
@@ -196,7 +196,7 @@ export default function Landing() {
             <div className="rounded-2xl bg-white p-8 shadow-sm border border-gray-200">
               <h3 className="text-lg font-bold text-gray-900">Business</h3>
               <div className="mt-4">
-                <span className="text-4xl font-extrabold text-gray-900">99€</span>
+                <span className="text-4xl font-extrabold text-gray-900">49€</span>
                 <span className="text-gray-500">/mois</span>
               </div>
               <ul className="mt-6 space-y-3 text-sm text-gray-600">

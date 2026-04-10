@@ -19,7 +19,7 @@ const PLANS = [
   {
     key: 'pro',
     name: 'Pro',
-    price: '49€',
+    price: '19€',
     period: '/mois',
     features: [
       '10 sites',
@@ -34,7 +34,7 @@ const PLANS = [
   {
     key: 'business',
     name: 'Business',
-    price: '99€',
+    price: '49€',
     period: '/mois',
     features: [
       'Tout Pro inclus',
