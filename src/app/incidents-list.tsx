@@ -579,28 +579,41 @@ function ModalDetail({
           </div>
 
           {/* Déplacer vers un autre site */}
-          {onMove && sites.length > 0 && (
-            <div className="border-t border-gray-100 pt-4">
-              <label className="block text-xs font-semibold text-gray-500 mb-1">
-                Déplacer vers
-              </label>
-              <select
-                value={notif.sites?.name ? sites.find((s) => s.name === notif.sites?.name)?.id ?? '' : '__free__'}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  onMove(val === '__free__' ? null : val);
-                }}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700"
-              >
-                <option value="__free__">📍 Signalement libre</option>
-                {sites.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {onMove && sites.length > 0 && (() => {
+            // Trouver l'ID du site actuel de la notif
+            const currentSiteId = sites.find((s) => s.name === notif.sites?.name)?.id;
+            // Si la notif est sur un site archivé (pas dans la liste active), on l'ajoute
+            const isOnArchivedSite = notif.sites?.name && !currentSiteId;
+
+            return (
+              <div className="border-t border-gray-100 pt-4">
+                <label className="block text-xs font-semibold text-gray-500 mb-1">
+                  Déplacer vers
+                </label>
+                <select
+                  value={currentSiteId ?? (isOnArchivedSite ? '__archived__' : '__free__')}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '__archived__') return; // ne rien faire
+                    onMove(val === '__free__' ? null : val);
+                  }}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700"
+                >
+                  {isOnArchivedSite && (
+                    <option value="__archived__">
+                      📦 {notif.sites?.name} (archivé)
+                    </option>
+                  )}
+                  <option value="__free__">📍 Signalement libre</option>
+                  {sites.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          })()}
 
           <div className="flex gap-3 border-t border-gray-100 pt-4">
             <select
