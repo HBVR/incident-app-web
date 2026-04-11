@@ -7,10 +7,53 @@ const POLL_INTERVAL = 15000; // 15 secondes
 const STORAGE_KEY = 'notifeo_last_seen';
 const ORIGINAL_TITLE = 'Notifeo — Signalez, notifiez, résolvez';
 
+function playNotifSound() {
+  try {
+    const ctx = new AudioContext();
+    // Note 1
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.frequency.value = 880;
+    osc1.type = 'sine';
+    gain1.gain.value = 0.15;
+    osc1.start(ctx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    osc1.stop(ctx.currentTime + 0.3);
+    // Note 2 (plus haute, léger délai)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.frequency.value = 1320;
+    osc2.type = 'sine';
+    gain2.gain.value = 0.12;
+    osc2.start(ctx.currentTime + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    osc2.stop(ctx.currentTime + 0.5);
+  } catch {}
+}
+
 export default function NotifBadge() {
   const pathname = usePathname();
   const originalFaviconRef = useRef<string>('/icon.png');
   const badgeFaviconRef = useRef<string | null>(null);
+  const prevCountRef = useRef<number>(0);
+  const hasInteractedRef = useRef<boolean>(false);
+
+  // Détecter la première interaction (requis pour jouer du son)
+  useEffect(() => {
+    const mark = () => { hasInteractedRef.current = true; };
+    window.addEventListener('click', mark, { once: true });
+    window.addEventListener('keydown', mark, { once: true });
+    window.addEventListener('touchstart', mark, { once: true });
+    return () => {
+      window.removeEventListener('click', mark);
+      window.removeEventListener('keydown', mark);
+      window.removeEventListener('touchstart', mark);
+    };
+  }, []);
 
   // Marquer comme lu quand on visite la page Notifs (/)
   useEffect(() => {
@@ -80,11 +123,16 @@ export default function NotifBadge() {
         const count = data.newNotifs ?? 0;
 
         if (count > 0 && pathname !== '/') {
-          // Nouvelles notifs non lues → badge rouge + titre
+          // Nouvelles notifs non lues → badge rouge + titre + son
+          if (count > prevCountRef.current && hasInteractedRef.current) {
+            playNotifSound();
+          }
+          prevCountRef.current = count;
           document.title = `(${count}) Notifeo`;
           const badgeUrl = await generateBadgeFavicon();
           setFavicon(badgeUrl);
         } else {
+          prevCountRef.current = 0;
           // Pas de nouvelles notifs → normal
           document.title = ORIGINAL_TITLE;
           setFavicon(originalFaviconRef.current);
