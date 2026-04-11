@@ -7,44 +7,51 @@ const POLL_INTERVAL = 15000; // 15 secondes
 const STORAGE_KEY = 'notifeo_last_seen';
 const ORIGINAL_TITLE = 'Notifeo — Signalez, notifiez, résolvez';
 
-// Son encodé en base64 (petit "ding" de 0.5s) — fonctionne sans AudioContext
-const NOTIF_SOUND = 'data:audio/wav;base64,UklGRl9vT19teleWQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAZGF0YQ==';
+function playNotifSound() {
+  // Générer un WAV "ding" en mémoire (44100Hz, 0.4s, 2 notes)
+  const sampleRate = 44100;
+  const duration = 0.4;
+  const samples = Math.floor(sampleRate * duration);
+  const buffer = new ArrayBuffer(44 + samples * 2);
+  const view = new DataView(buffer);
 
-async function playNotifSound() {
-  try {
-    // Méthode 1 : AudioContext (plus fiable pour générer un son)
-    const ctx = new AudioContext();
-    if (ctx.state === 'suspended') await ctx.resume();
+  // WAV header
+  const writeString = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  };
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + samples * 2, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, samples * 2, true);
 
-    const osc1 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.connect(gain1);
-    gain1.connect(ctx.destination);
-    osc1.frequency.value = 880;
-    osc1.type = 'sine';
-    gain1.gain.value = 0.4;
-    osc1.start(ctx.currentTime);
-    gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-    osc1.stop(ctx.currentTime + 0.3);
-
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
-    osc2.frequency.value = 1320;
-    osc2.type = 'sine';
-    gain2.gain.value = 0.3;
-    osc2.start(ctx.currentTime + 0.15);
-    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-    osc2.stop(ctx.currentTime + 0.5);
-  } catch {
-    // Méthode 2 fallback : HTML Audio
-    try {
-      const audio = new Audio(NOTIF_SOUND);
-      audio.volume = 0.5;
-      await audio.play();
-    } catch {}
+  // Generate two-tone ding
+  for (let i = 0; i < samples; i++) {
+    const t = i / sampleRate;
+    const envelope = Math.exp(-t * 8);
+    const freq1 = 880;
+    const freq2 = 1320;
+    const mix = t < 0.15
+      ? Math.sin(2 * Math.PI * freq1 * t)
+      : Math.sin(2 * Math.PI * freq2 * t);
+    const sample = Math.floor(mix * envelope * 16000);
+    view.setInt16(44 + i * 2, sample, true);
   }
+
+  const blob = new Blob([buffer], { type: 'audio/wav' });
+  const url = URL.createObjectURL(blob);
+  const audio = new Audio(url);
+  audio.volume = 0.6;
+  audio.play().catch(() => {});
+  audio.onended = () => URL.revokeObjectURL(url);
 }
 
 export default function NotifBadge() {
